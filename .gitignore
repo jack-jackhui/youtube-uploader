@@ -1,0 +1,9 @@
+venv
+venv/*
+downloaded_videos
+.env*
+client_secrets.json
+*.pickle
+/.idea/
+.DS_Store
+service_account.json
