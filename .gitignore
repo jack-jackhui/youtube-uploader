@@ -7,3 +7,4 @@ client_secrets.json
 /.idea/
 .DS_Store
 service_account.json
+/*/__pycache_ls_/*
