@@ -15,12 +15,8 @@ env = os.getenv('ENV', 'development')
 dotenv_path = f'.env.{env}'
 
 # Load the environment variables from the chosen file
-load_dotenv(dotenv_path=dotenv_path)# Determine which .env file to load
-env = os.getenv('ENV', 'development')
-dotenv_path = f'.env.{env}'
-
-# Load the environment variables from the chosen file
 load_dotenv(dotenv_path=dotenv_path)
+
 
 # Now you can access these variables using os.getenv
 api_host = os.getenv('API_HOST')
