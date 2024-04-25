@@ -14,7 +14,7 @@ import re
 
 def sanitize_title(title):
     """
-    Sanitizes a video title by removing or replacing characters that might be problematic.
+    Sanitizes a video title by removing or replacing characters that might be problematic and ensures it does not exceed 100 characters.
 
     Args:
     title (str): The original title of the video.
@@ -30,15 +30,18 @@ def sanitize_title(title):
 
     # Remove hashtags and other problematic special characters, replace with space
     title = re.sub(r'[#]', ' ', title)  # Handles hashtags specifically
-    title = re.sub(r'[^\w\s\-,.]', ' ',
-                   title)  # Removes any character not a word, space, hyphen, or specified punctuation
+    title = re.sub(r'[^\w\s\-,.]', ' ', title)  # Removes any character not a word, space, hyphen, or specified punctuation
 
     # Replace multiple spaces or underscores with a single space
     title = re.sub(r'\s+', ' ', title)
     title = re.sub(r'_+', ' ', title)
 
-    # Trim spaces and underscores from the beginning and end of the title
+    # Trim spaces from the beginning and end of the title
     title = title.strip()
+
+    # Truncate the title to 100 characters if longer
+    if len(title) > 100:
+        title = title[:100].rstrip()  # Truncate and remove any trailing spaces after cutting
 
     # Ensure the title is not empty after sanitization
     if not title:
@@ -86,10 +89,11 @@ def upload_video(youtube, video_file, title, description, tags):
     if not video_file or not os.path.exists(video_file):
         raise FileNotFoundError("The video file path must be specified and the file must exist.")
 
+    print(f"Original title: {title}")
     sanitized_title = sanitize_title(title)  # Sanitize the title
 
-    if not sanitized_title:
-        raise ValueError("The video title cannot be empty after sanitization.")
+    if not sanitized_title or sanitized_title == "Default Title":
+        print("Warning: Title fell back to default due to empty or invalid sanitization result.")
 
     print(f"Sanitized title: {sanitized_title}")
 
@@ -98,7 +102,7 @@ def upload_video(youtube, video_file, title, description, tags):
             'title': sanitized_title,
             'description': description,
             'tags': tags,
-            'categoryId': '28'  # This is the category for People & Blogs
+            'categoryId': '28'  # This is the category for science
         },
         'status': {
             'privacyStatus': 'public'
