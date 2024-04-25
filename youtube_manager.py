@@ -9,6 +9,9 @@ import os
 import pickle
 import re
 
+import re
+
+
 def sanitize_title(title):
     """
     Sanitizes a video title by removing or replacing characters that might be problematic.
@@ -25,18 +28,24 @@ def sanitize_title(title):
     # Remove leading and trailing whitespace
     title = title.strip()
 
-    # Replace problematic special characters with an underscore or similar safe character
-    # This regex removes anything that is not a word character, space, or allowed punctuation
-    title = re.sub(r'[^\w\s\-,.]', '_', title)
+    # Remove hashtags and other problematic special characters, replace with space
+    title = re.sub(r'[#]', ' ', title)  # Handles hashtags specifically
+    title = re.sub(r'[^\w\s\-,.]', ' ',
+                   title)  # Removes any character not a word, space, hyphen, or specified punctuation
 
-    # Replace multiple spaces or underscores with a single one
-    title = re.sub(r'\s+', ' ', title).replace('__', '_')
+    # Replace multiple spaces or underscores with a single space
+    title = re.sub(r'\s+', ' ', title)
+    title = re.sub(r'_+', ' ', title)
+
+    # Trim spaces and underscores from the beginning and end of the title
+    title = title.strip()
 
     # Ensure the title is not empty after sanitization
     if not title:
         return "Default Title"
 
     return title
+
 
 def authenticate_youtube():
     # Define the scopes required by the application.
@@ -82,7 +91,7 @@ def upload_video(youtube, video_file, title, description, tags):
     if not sanitized_title:
         raise ValueError("The video title cannot be empty after sanitization.")
 
-    print(title)
+    print(f"Sanitized title: {sanitized_title}")
 
     body = {
         'snippet': {
