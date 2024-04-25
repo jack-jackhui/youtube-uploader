@@ -21,3 +21,19 @@ To install the necessary Python libraries, run the following command:
 
 ```bash
 pip install -r requirements.txt
+```
+
+## Contributing
+
+Contributions to the YouTube Upload Project are welcome. To contribute:
+
+Fork the project.
+Create a new branch (git checkout -b feature/your_feature).
+Make your changes.
+Commit your changes (git commit -am 'Add some feature').
+Push to the branch (git push origin feature/your_feature).
+Open a pull request.
+
+## Acknowledgements
+
+Thanks to Google for the YouTube Data API.
