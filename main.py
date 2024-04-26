@@ -46,7 +46,7 @@ def main():
                         "focused on one of the following topics: " \
                         "AI,Defi,ChatGPT, blockchain, Bitcoin, Ethereum, Solana and Algorand." \
                         "Rotate between these topics frequently, but do not write more than one " \
-                        "topics in a single video subject."
+                        "topics in a single video subject. Limit the number of characters to 100 or less."
 
     # Generate video subject using OpenAI's ChatGPT
     print("Generating video subject...")
