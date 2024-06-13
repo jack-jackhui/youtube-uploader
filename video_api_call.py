@@ -5,10 +5,10 @@ import os
 import re
 import time
 
-def generate_video_script(access_token, api_host, video_subject, video_language, paragraph_number):
+def generate_video_script(api_key, api_host, video_subject, video_language, paragraph_number):
     api_url = f'{api_host}/api/v1/scripts'
     #print("Access Token is", access_token)
-    headers = {'access_token': access_token}
+    headers = {'X-API-Key': api_key}
     payload = {
         "video_subject": video_subject,
         "video_language": video_language,
@@ -27,9 +27,9 @@ def generate_video_script(access_token, api_host, video_subject, video_language,
         raise Exception(f"Error: {response.status_code} - {response.json().get('message')}")
 
 
-def generate_video_terms(access_token, api_host, video_subject, video_script, amount):
+def generate_video_terms(api_key, api_host, video_subject, video_script, amount):
     api_url = f'{api_host}/api/v1/terms'
-    headers = {'access_token': access_token}
+    headers = {'X-API-Key': api_key}
     payload = {
         "video_subject": video_subject,
         "video_language": video_script,
@@ -46,14 +46,14 @@ def generate_video_terms(access_token, api_host, video_subject, video_script, am
     else:
         raise Exception(f"Error: {response.status_code} - {response.json().get('message')}")
 
-def generate_video(access_token, api_host, video_subject, video_script, video_terms, voice_name, video_aspect="9:16",
+def generate_video(api_key, api_host, video_subject, video_script, video_terms, voice_name, video_aspect="9:16",
                    video_concat_mode="random", video_clip_duration=5, video_count=1, video_language="",
                    voice_volume=1, bgm_type="random", bgm_file="", bgm_volume=0.2,
                    subtitle_enabled=True, subtitle_position="bottom", font_name="STHeitiMedium.ttc",
                    text_fore_color="#FFFFFF", text_background_color="transparent", font_size=60,
                    stroke_color="#000000", stroke_width=1.5, n_threads=2, paragraph_number=1):
     api_url = f'{api_host}/api/v1/videos'
-    headers = {'access_token': access_token}
+    headers = {'X-API-Key': api_key}
     payload = {
         "video_subject": video_subject,
         "video_script": video_script,
@@ -93,7 +93,7 @@ def generate_video(access_token, api_host, video_subject, video_script, video_te
         # Handles any other exceptions
         print(f"An error occurred: {e}")
 
-def check_task_status(access_token, api_url, task_id):
+def check_task_status(api_key, api_url, task_id):
     """
     Polls the task status endpoint until the video generation task is complete.
 
@@ -106,7 +106,7 @@ def check_task_status(access_token, api_url, task_id):
     bool: True if the task is completed successfully, False otherwise.
     """
     status_url = f"{api_url}/api/v1/tasks/{task_id}"
-    headers = {'access_token': access_token}
+    headers = {'X-API-Key': api_key}
 
     try:
         while True:

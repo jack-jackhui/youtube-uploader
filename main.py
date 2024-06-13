@@ -20,7 +20,7 @@ load_dotenv(dotenv_path=dotenv_path)
 
 # Now you can access these variables using os.getenv
 api_host = os.getenv('API_HOST')
-access_token = os.getenv('API_KEY')
+api_key = os.getenv('API_KEY')
 
 openai_api_key = os.getenv('OPEN_AI_KEY')  # Retrieve securely
 
@@ -41,10 +41,10 @@ def main():
     with open('last_voice.json', 'w') as file:
         json.dump({'last_voice_name': voice_name}, file)
 
-    predefined_prompt = "Act as a social media influencer, generate a creative and engaging " \
+    predefined_prompt = "Act as a social media influencer, generate a single creative and engaging " \
                         "one line video subject for a tech-themed YouTube channel, ensure the video subject " \
                         "focused on one of the following topics: " \
-                        "AI,Defi,ChatGPT, blockchain, Bitcoin, Ethereum, Solana and Algorand." \
+                        "AI,Defi,ChatGPT, blockchain, Bitcoin, Ethereum, Solana or Algorand." \
                         "Rotate between these topics frequently, but do not write more than one " \
                         "topics in a single video subject. Limit the number of characters to 100 or less."
 
@@ -56,9 +56,9 @@ def main():
     video_keyword_amt = 5
 
     if video_subject:
-        video_script = video_api_call.generate_video_script(access_token, api_host, video_subject, '', 1)
+        video_script = video_api_call.generate_video_script(api_key, api_host, video_subject, '', 1)
         print(f"Video Script: {video_script}")
-        video_terms = video_api_call.generate_video_terms(access_token,api_host, video_subject, video_script, video_keyword_amt)
+        video_terms = video_api_call.generate_video_terms(api_key,api_host, video_subject, video_script, video_keyword_amt)
         print(f"Video Keywords: {video_terms}")
 
         # Handle potential NoneType for video_terms
@@ -71,13 +71,17 @@ def main():
     print("Generating video...")
     #print(f"Video Script: {video_script}")
     #print(f"Video Keywords: {video_terms}")
-    video_url = video_api_call.generate_video(access_token, api_host, video_subject, video_script, video_terms, voice_name=voice_name)
+    video_url = video_api_call.generate_video(api_key, api_host, video_subject, video_script, video_terms, voice_name=voice_name)
 
     # Extract the task ID from the URL
-    task_id = video_url.split('/')[-2]
+    if video_url:
+        task_id = video_url.split('/')[-2]
+    else:
+        print("Failed to obtain video URL")
+        return
 
     # Check the status of the video generation task
-    if video_api_call.check_task_status(access_token, api_host, task_id):
+    if video_api_call.check_task_status(api_key, api_host, task_id):
         # Once completed, download the video
         downloaded_file = video_api_call.download_video(video_url, video_subject)
         if downloaded_file:

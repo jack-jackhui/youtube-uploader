@@ -2,9 +2,15 @@
 
 import os
 from openai import OpenAI
+from openai import AzureOpenAI
 
 def generate_video_subject(api_key, prompt):
-    client = OpenAI(api_key=api_key)  # Setup the client with your API key
+    # client = OpenAI(api_key=api_key)  # Setup the client with your API key
+    client = AzureOpenAI(
+        api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+        api_version="2023-12-01-preview",
+        azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
+    )
 
     try:
         chat_completion = client.chat.completions.create(
@@ -14,7 +20,7 @@ def generate_video_subject(api_key, prompt):
                     "content": prompt,
                 }
             ],
-            model="gpt-3.5-turbo",  # Specify the model here, adjust if needed
+            model="gpt-4-32k",  # Specify the model here, adjust if needed
         )
         # Extracting the content from the completion response
         subject = chat_completion.choices[0].message.content
