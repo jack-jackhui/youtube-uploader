@@ -9,6 +9,7 @@ import json
 from dotenv import load_dotenv
 import os
 import test_youtube
+from email_notifier import send_email
 
 # Determine which .env file to load
 env = os.getenv('ENV', 'development')
@@ -98,6 +99,14 @@ def main():
     upload_response = youtube_manager.upload_video(youtube, downloaded_file, video_subject, video_subject, tags)
 
     print("Video uploaded successfully. Video ID:", upload_response['id'])
+
+    # Prepare email notification
+    subject = "Your Latest Youtube Video Uploaded Successfully"
+    body = f"Your video has been uploaded successfully to Youtube! Video ID: {upload_response['id']}"
+    to_emails = ["jack_hui@msn.com"]  # List of email recipients
+
+    # Send the email
+    send_email(subject, body, to_emails)
 
 if __name__ == '__main__':
     # Uncomment the line below to test YouTube upload functionality independently.
