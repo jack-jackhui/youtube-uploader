@@ -1,5 +1,5 @@
 # voice_manager.py
-
+import json
 import random
 
 # List of voices
@@ -23,4 +23,16 @@ voices = [
 def get_random_voice(last_voice=None):
     available_voices = [voice for voice in voices if voice['name'] != last_voice]
     selected_voice = random.choice(available_voices)
-    return selected_voice
+    return selected_voice['name']
+
+def get_last_used_voice():
+    try:
+        with open('last_voice.json', 'r') as file:
+            last_voice_data = json.load(file)
+            return last_voice_data.get('last_voice_name')
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+
+def store_last_used_voice(voice_name):
+    with open('last_voice.json', 'w') as file:
+        json.dump({'last_voice_name': voice_name}, file)
