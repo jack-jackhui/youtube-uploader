@@ -12,7 +12,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Deploying to Oracle cloud VM
         uses: appleboy/ssh-action@master
@@ -24,9 +24,15 @@ jobs:
           script: |
             # Move into the app's folder
             cd /home/ubuntu/youtube-uploader
+
+            # Stash any local changes before pulling (including last_voice.json)
+            git stash
             
             # Ensure git repository is up to date
             git pull
+
+            # Reapply stashed changes
+            git stash pop || echo "No stashed changes to apply."
             
             # Ensure the shell script is with execute permission
             chmod +x run*.sh
@@ -42,3 +48,17 @@ jobs:
             # Upgrade pip and install required packages
             python -m pip install --upgrade pip
             pip install -r requirements.txt
+
+      - name: Notify Telegram on success
+        if: success()
+        run: |
+          curl -s -X POST https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage \
+            -d chat_id=${{ secrets.TELEGRAM_CHAT_ID }} \
+            -d text="✅ GitHub Actions Workflow Succeeded on ${{ github.repository }} (commit: ${{ github.sha }})."
+
+      - name: Notify Telegram on failure
+        if: failure()
+        run: |
+          curl -s -X POST https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage \
+            -d chat_id=${{ secrets.TELEGRAM_CHAT_ID }} \
+            -d text="❌ GitHub Actions Workflow Failed on ${{ github.repository }} (commit: ${{ github.sha }})."
