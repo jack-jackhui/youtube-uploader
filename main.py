@@ -120,15 +120,20 @@ def main():
 
         if video_paths:
             original_video_path, converted_video_path = video_paths
+            # Check the environment variable to determine whether to skip YouTube upload
+            skip_yt_upload = os.getenv("SKIP_YT_UPLOAD", "false").lower() == "true"
 
-            # Upload original video to YouTube
-            youtube = authenticate_youtube()
-            upload_response = upload_video(youtube, original_video_path, video_subject, video_subject, tags)
+            if not skip_yt_upload:
+                # Upload original video to YouTube
+                youtube = authenticate_youtube()
+                upload_response = upload_video(youtube, original_video_path, video_subject, video_subject, tags)
 
-            if upload_response:
-                # Send email notification upon successful YouTube upload
-                send_notification_email(upload_response['id'])
-                print(f"Video uploaded successfully to YouTube. Video ID: {upload_response['id']}")
+                if upload_response:
+                    # Send email notification upon successful YouTube upload
+                    send_notification_email(upload_response['id'])
+                    print(f"Video uploaded successfully to YouTube. Video ID: {upload_response['id']}")
+            else:
+                print("YouTube upload skipped as per configuration.")
 
             # Check the environment variable to determine whether to skip Instagram upload
             skip_ig_upload = os.getenv("SKIP_IG_UPLOAD", "false").lower() == "true"

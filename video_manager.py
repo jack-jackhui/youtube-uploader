@@ -50,18 +50,23 @@ def generate_and_download_video(video_subject, video_script, video_terms, voice_
 
     # Check the status of the video generation task
     if video_api_call.check_task_status(api_key, api_host, task_id):
-        # If conversion exists, download both
+        # Initialize variables to store the downloaded video paths
+        original_video_path = None
+        converted_video_path = None
+
+        # Download the original video
+        print(f"Downloading original video: {original_video_url}")
+        original_video_path = video_api_call.download_video(original_video_url, video_subject,
+                                                            save_path="downloaded_videos")
+
+        # Check if the converted video exists, and download it if present
         if converted_video_url:
-            print(f"Converted video found: {converted_video_url}")
-            converted_video_path = video_api_call.download_video(converted_video_url, video_subject,
+            print(f"Downloading converted video: {converted_video_url}")
+            converted_video_path = video_api_call.download_video(converted_video_url, f"{video_subject}_converted",
                                                                  save_path="downloaded_videos")
-            original_video_path = video_api_call.download_video(original_video_url, video_subject + "_original",
-                                                                save_path="downloaded_videos")
-            return original_video_path, converted_video_path
-        else:
-            # Only the original video exists
-            print(f"Only original video found: {original_video_url}")
-            original_video_path = video_api_call.download_video(original_video_url, video_subject,
-                                                                save_path="downloaded_videos")
-            return original_video_path, None
+
+        # Return the paths to both the original and converted videos
+        return original_video_path, converted_video_path
+    else:
+        print(f"Task {task_id} failed or was incomplete.")
     return None
