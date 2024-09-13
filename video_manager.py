@@ -34,9 +34,11 @@ def process_video_subject(video_subject):
     return video_script, video_terms, tags
 
 
-def generate_and_download_video(video_subject, video_script, video_terms, voice_name):
+def generate_video_and_get_urls(video_subject, video_script, video_terms, voice_name):
     api_host = os.getenv('API_HOST')
     api_key = os.getenv('API_KEY')
+
+    # Generate the video and get the URLs
     video_urls = video_api_call.generate_video(api_key, api_host, video_subject, video_script, video_terms, voice_name)
 
     if not video_urls:
@@ -50,23 +52,8 @@ def generate_and_download_video(video_subject, video_script, video_terms, voice_
 
     # Check the status of the video generation task
     if video_api_call.check_task_status(api_key, api_host, task_id):
-        # Initialize variables to store the downloaded video paths
-        original_video_path = None
-        converted_video_path = None
-
-        # Download the original video
-        print(f"Downloading original video: {original_video_url}")
-        original_video_path = video_api_call.download_video(original_video_url, video_subject,
-                                                            save_path="downloaded_videos")
-
-        # Check if the converted video exists, and download it if present
-        if converted_video_url:
-            print(f"Downloading converted video: {converted_video_url}")
-            converted_video_path = video_api_call.download_video(converted_video_url, f"{video_subject}_converted",
-                                                                 save_path="downloaded_videos")
-
-        # Return the paths to both the original and converted videos
-        return original_video_path, converted_video_path
+        # Return the public URLs
+        return original_video_url, converted_video_url
     else:
         print(f"Task {task_id} failed or was incomplete.")
-    return None
+        return None, None

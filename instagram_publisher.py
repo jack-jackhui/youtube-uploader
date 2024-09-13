@@ -78,7 +78,7 @@ def publish_video_to_instagram(ig_user_id, video_url, access_token):
                 # Step 2: Publish the container
                 media_id = publish_media(ig_user_id, container_id, access_token)
                 print(f"Video published to Instagram with media ID: {media_id}")
-                return
+                return True
             elif status == 'ERROR':
                 # Break out of the loop if there is an error
                 break
@@ -89,6 +89,7 @@ def publish_video_to_instagram(ig_user_id, video_url, access_token):
 
     except Exception as e:
         print(str(e))
+        return False
 
 if __name__ == '__main__':
     # Provide the Instagram User ID, video URL, and access token

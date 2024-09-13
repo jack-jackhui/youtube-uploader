@@ -5,7 +5,7 @@ from youtube_manager import authenticate_youtube, upload_video
 # import google_sheets
 import openai_chatgpt
 from voice_manager import get_last_used_voice, get_random_voice, store_last_used_voice
-from video_manager import generate_video_subject, process_video_subject, generate_and_download_video
+from video_manager import generate_video_subject, process_video_subject, generate_video_and_get_urls
 import json
 from dotenv import load_dotenv
 import os
@@ -116,14 +116,18 @@ def main():
     if video_subject:
         video_script, video_terms, tags = process_video_subject(video_subject)
         # Generate and download the video (both original and potentially converted)
-        video_paths = generate_and_download_video(video_subject, video_script, video_terms, voice_name)
+        video_urls = generate_video_and_get_urls(video_subject, video_script, video_terms, voice_name)
 
-        if video_paths:
-            original_video_path, converted_video_path = video_paths
+        if video_urls:
+            original_video_url, converted_video_url = video_urls
             # Check the environment variable to determine whether to skip YouTube upload
             skip_yt_upload = os.getenv("SKIP_YT_UPLOAD", "false").lower() == "true"
 
             if not skip_yt_upload:
+                # Download the original video
+                print(f"Downloading original video for YouTube upload: {original_video_url}")
+                original_video_path = video_api_call.download_video(original_video_url, video_subject, save_path="downloaded_videos")
+
                 # Upload original video to YouTube
                 youtube = authenticate_youtube()
                 upload_response = upload_video(youtube, original_video_path, video_subject, video_subject, tags)
@@ -140,13 +144,19 @@ def main():
 
             if not skip_ig_upload:
                 # If converted video exists, upload it to Instagram
-                if converted_video_path:
-                    print(f"Uploading converted video to Instagram: {converted_video_path}")
-                    publish_video_to_instagram(ig_user_id, converted_video_path, ig_access_token)
+                if converted_video_url:
+                    print(f"Uploading converted video to Instagram: {converted_video_url}")
+                    instagram_upload_success = publish_video_to_instagram(ig_user_id, converted_video_url, ig_access_token)
                 else:
                     # If no converted video, upload the original video to Instagram
-                    print(f"No converted video found. Uploading original video to Instagram: {original_video_path}")
-                    publish_video_to_instagram(ig_user_id, original_video_path, ig_access_token)
+                    print(f"No converted video found. Uploading original video to Instagram: {original_video_url}")
+                    instagram_upload_success = publish_video_to_instagram(ig_user_id, original_video_url, ig_access_token)
+
+                if instagram_upload_success:
+                    send_instagram_notification_email()
+                    print("Email notification sent for successful Instagram upload.")
+                else:
+                    print("Instagram upload failed. No email notification sent.")
             else:
                 print("Instagram upload skipped as per configuration.")
         else:
@@ -155,6 +165,11 @@ def main():
 def send_notification_email(video_id):
     subject = "Your Latest Youtube Video Uploaded Successfully"
     body = f"Your video has been uploaded successfully to Youtube! Video ID: {video_id}"
+    send_email(subject, body, ["jack_hui@msn.com"])
+
+def send_instagram_notification_email():
+    subject = "Your Latest Instagram Video Uploaded Successfully"
+    body = "Your video has been uploaded successfully to Instagram!"
     send_email(subject, body, ["jack_hui@msn.com"])
 
 if __name__ == '__main__':
