@@ -24,15 +24,10 @@ jobs:
           script: |
             # Move into the app's folder
             cd /home/ubuntu/youtube-uploader
-
-            # Stash any local changes before pulling (including last_voice.json)
-            git stash
             
             # Ensure git repository is up to date
-            git pull
-
-            # Reapply stashed changes
-            git stash pop || echo "No stashed changes to apply."
+            git fetch origin main
+            git reset --hard origin/main
             
             # Ensure the shell script is with execute permission
             chmod +x run*.sh
