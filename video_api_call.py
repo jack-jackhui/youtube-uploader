@@ -46,18 +46,6 @@ def generate_video_terms(api_key, api_host, video_subject, video_script, amount)
     else:
         raise Exception(f"Error: {response.status_code} - {response.json().get('message')}")
 
-def check_remote_file_exists(url):
-    """
-    Check if a remote file exists by sending a HEAD request to the URL.
-    Returns True if the file exists, False otherwise.
-    """
-    try:
-        response = requests.head(url)
-        return response.status_code == 200
-    except requests.RequestException as e:
-        print(f"Error checking remote file: {e}")
-        return False
-
 def generate_video(api_key, api_host, video_subject, video_script, video_terms, voice_name, video_aspect="9:16",
                    video_concat_mode="random", video_clip_duration=5, video_count=1, video_language="",
                    voice_volume=1, bgm_type="random", bgm_file="", bgm_volume=0.2,
@@ -96,15 +84,12 @@ def generate_video(api_key, api_host, video_subject, video_script, video_terms, 
         response.raise_for_status()  # This will raise an exception for HTTP errors
         task_id = response.json()['data']['task_id']
         download_url = f"{api_host}/tasks/{task_id}/final-1.mp4"
-        converted_video_path = f"{api_host}/tasks/{task_id}/final-1_converted.mp4"
-
-        # Check if the converted file exists on the remote server
-        converted_exists = check_remote_file_exists(converted_video_path)
+        converted_video_url = f"{api_host}/tasks/{task_id}/final-1_converted.mp4"
 
         # Return the appropriate video URLs
         return {
             "original": download_url,
-            "converted": converted_video_path if converted_exists else None
+            "converted": converted_video_url
         }
     except requests.exceptions.HTTPError as err:
         # Handles HTTP errors that raise_for_status might throw

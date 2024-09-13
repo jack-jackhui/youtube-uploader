@@ -2,6 +2,7 @@ import video_api_call
 import openai_chatgpt
 import os
 from dotenv import load_dotenv
+import requests
 
 # Determine which .env file to load
 env = os.getenv('ENV', 'development')
@@ -53,7 +54,20 @@ def generate_video_and_get_urls(video_subject, video_script, video_terms, voice_
     # Check the status of the video generation task
     if video_api_call.check_task_status(api_key, api_host, task_id):
         # Return the public URLs
-        return original_video_url, converted_video_url
+        converted_video_url_exist = check_remote_file_exists(converted_video_url)
+        return original_video_url, converted_video_url if converted_video_url_exist else None
     else:
         print(f"Task {task_id} failed or was incomplete.")
         return None, None
+
+def check_remote_file_exists(url):
+    """
+    Check if a remote file exists by sending a HEAD request to the URL.
+    Returns True if the file exists, False otherwise.
+    """
+    try:
+        response = requests.head(url)
+        return response.status_code == 200
+    except requests.RequestException as e:
+        print(f"Error checking remote file: {e}")
+        return False
