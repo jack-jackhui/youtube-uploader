@@ -8,3 +8,4 @@ client_secrets.json
 .DS_Store
 service_account.json
 /*/__pycache_ls_/*
+last_voice.json
