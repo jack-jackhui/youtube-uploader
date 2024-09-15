@@ -16,7 +16,7 @@ def generate_video_subject(api_key):
     predefined_prompt = "Act as a social media influencer, generate a single creative and engaging " \
                         "one line video subject for a tech-themed YouTube channel, ensure the video subject " \
                         "focused on one of the following topics: " \
-                        "AI,Defi,ChatGPT, blockchain, Bitcoin, Ethereum, Solana or Algorand." \
+                        "AI,Defi,ChatGPT, blockchain, Bitcoin, Ethereum, WEB3.0, Solana or Algorand." \
                         "Rotate between these topics frequently, but do not write more than one " \
                         "topics in a single video subject. Limit the number of characters to 100 or less."
 
