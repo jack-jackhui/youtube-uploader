@@ -4,8 +4,8 @@ import requests
 import os
 import re
 import time
-
-def generate_video_script(api_key, api_host, video_subject, video_language, paragraph_number):
+import unidecode
+def generate_video_script(api_key, api_host, video_subject, video_language='en', paragraph_number=1):
     api_url = f'{api_host}/api/v1/scripts'
     #print("Access Token is", access_token)
     headers = {'X-API-Key': api_key}
@@ -27,13 +27,14 @@ def generate_video_script(api_key, api_host, video_subject, video_language, para
         raise Exception(f"Error: {response.status_code} - {response.json().get('message')}")
 
 
-def generate_video_terms(api_key, api_host, video_subject, video_script, amount):
+def generate_video_terms(api_key, api_host, video_subject, video_script, amount, video_language='en'):
     api_url = f'{api_host}/api/v1/terms'
     headers = {'X-API-Key': api_key}
     payload = {
         "video_subject": video_subject,
         "video_language": video_script,
-        "amount": amount
+        "amount": amount,
+        "video_language": video_language
     }
     response = requests.post(api_url, headers=headers, json=payload)
     if response.status_code == 200:
@@ -139,7 +140,11 @@ def check_task_status(api_key, api_url, task_id):
 
 def sanitize_filename(filename):
     """Sanitizes a string to be safe for use as a filename."""
-    return re.sub(r'[^a-zA-Z0-9_\-.]', '_', filename)
+    # Remove double quotes and other special characters except for alphanumeric, underscores, hyphens, and periods
+    sanitized = re.sub(r'[^\w\-.]', '_', filename)
+    # Convert any non-ASCII characters (e.g., Chinese) to their closest ASCII equivalent
+    sanitized = unidecode.unidecode(sanitized)
+    return sanitized
 
 def download_video(video_url, video_subject, save_path="downloaded_videos"):
     """

@@ -1,5 +1,7 @@
 # main.py
-
+import sys
+import asyncio
+import argparse
 import video_api_call
 from youtube_manager import authenticate_youtube, upload_video
 # import google_sheets
@@ -12,6 +14,7 @@ import os
 import test_youtube
 from email_notifier import send_email
 from instagram_publisher import publish_video_to_instagram
+from main_cn import main as chinese_uploader_main
 
 # Determine which .env file to load
 env = os.getenv('ENV', 'development')
@@ -31,136 +34,114 @@ ig_user_id = os.getenv("IG_USER_ID")  # Instagram User ID
 ig_access_token = os.getenv("IG_ACCESS_TOKEN")  # Instagram Access Token
 
 def main():
-    """
-    # Load the last used voice if available
-    try:
-        with open('last_voice.json', 'r') as file:
-            last_voice = json.load(file).get('last_voice_name')
-    except (FileNotFoundError, json.JSONDecodeError):
-        last_voice = None
+    parser = argparse.ArgumentParser(description="Generate and upload videos to various platforms.")
+    parser.add_argument('--language', choices=['en', 'zh'], default='en', help="Language of the video ('en' for English, 'zh' for Chinese).")
+    args = parser.parse_args()
 
-    # Get a new random voice, not repeating the last one
-    voice = voice_manager.get_random_voice(last_voice)
-    voice_name = voice['name']
-
-    # Store the current voice as the last used for next time
-    with open('last_voice.json', 'w') as file:
-        json.dump({'last_voice_name': voice_name}, file)
-
-    predefined_prompt = "Act as a social media influencer, generate a single creative and engaging " \
-                        "one line video subject for a tech-themed YouTube channel, ensure the video subject " \
-                        "focused on one of the following topics: " \
-                        "AI,Defi,ChatGPT, blockchain, Bitcoin, Ethereum, Solana or Algorand." \
-                        "Rotate between these topics frequently, but do not write more than one " \
-                        "topics in a single video subject. Limit the number of characters to 100 or less."
-
-    # Generate video subject using OpenAI's ChatGPT
-    print("Generating video subject...")
-    video_subject = openai_chatgpt.generate_video_subject(openai_api_key, predefined_prompt)
-    print(f"Video Subject: {video_subject}")
-
-    video_keyword_amt = 5
-
-    if video_subject:
-        video_script = video_api_call.generate_video_script(api_key, api_host, video_subject, '', 1)
-        print(f"Video Script: {video_script}")
-        video_terms = video_api_call.generate_video_terms(api_key,api_host, video_subject, video_script, video_keyword_amt)
-        print(f"Video Keywords: {video_terms}")
-
-        # Handle potential NoneType for video_terms
-        if video_terms:
-            tags = video_terms
-        else:
-            tags = ["Future Tech", "tags"]
-
-
-    print("Generating video...")
-    #print(f"Video Script: {video_script}")
-    #print(f"Video Keywords: {video_terms}")
-    video_url = video_api_call.generate_video(api_key, api_host, video_subject, video_script, video_terms, voice_name=voice_name)
-
-    # Extract the task ID from the URL
-    if video_url:
-        task_id = video_url.split('/')[-2]
-        publish_video_to_instagram(ig_user_id, video_url, ig_access_token)
-    else:
-        print("Failed to obtain video URL")
-        return
-
-    # Check the status of the video generation task
-    if video_api_call.check_task_status(api_key, api_host, task_id):
-        # Once completed, download the video
-        downloaded_file = video_api_call.download_video(video_url, video_subject)
-        if downloaded_file:
-            print(f"Video downloaded successfully: {downloaded_file}")
-        else:
-            print("Failed to download video.")
-    else:
-        print("Video generation task failed or was incomplete.")
-
-    print("Authenticating with YouTube...")
-    youtube = youtube_manager.authenticate_youtube()
-
-    print("Uploading video to YouTube...")
-    upload_response = youtube_manager.upload_video(youtube, downloaded_file, video_subject, video_subject, tags)
-
-    print("Video uploaded successfully. Video ID:", upload_response['id'])
-    """
+    language = args.language
 
     # Main process flow
-    last_voice = get_last_used_voice()
-    voice_name = get_random_voice(last_voice)
+    last_voice = get_last_used_voice(language)
+    voice_name = get_random_voice(last_voice, language)
     store_last_used_voice(voice_name)  # Store the current voice for next time
 
-    video_subject = generate_video_subject(openai_api_key)
+    video_subject = generate_video_subject(openai_api_key, language)
     if video_subject:
-        video_script, video_terms, tags = process_video_subject(video_subject)
+        video_script, video_terms, tags = process_video_subject(video_subject, language)
         # Generate and download the video (both original and potentially converted)
-        video_urls = generate_video_and_get_urls(video_subject, video_script, video_terms, voice_name)
+        video_urls = generate_video_and_get_urls(video_subject, video_script, video_terms, voice_name, language)
 
         if video_urls:
             original_video_url, converted_video_url = video_urls
-            # Check the environment variable to determine whether to skip YouTube upload
-            skip_yt_upload = os.getenv("SKIP_YT_UPLOAD", "false").lower() == "true"
 
-            if not skip_yt_upload:
-                # Download the original video
-                print(f"Downloading original video for YouTube upload: {original_video_url}")
-                original_video_path = video_api_call.download_video(original_video_url, video_subject, save_path="downloaded_videos")
+            if language == 'en':
+                # Check the environment variable to determine whether to skip YouTube upload
+                skip_yt_upload = os.getenv("SKIP_YT_UPLOAD", "false").lower() == "true"
 
-                # Upload original video to YouTube
-                youtube = authenticate_youtube()
-                upload_response = upload_video(youtube, original_video_path, video_subject, video_subject, tags)
+                if not skip_yt_upload:
+                    # Download the original video
+                    print(f"Downloading original video for YouTube upload: {original_video_url}")
+                    original_video_path = video_api_call.download_video(original_video_url, video_subject, save_path="downloaded_videos")
 
-                if upload_response:
-                    # Send email notification upon successful YouTube upload
-                    send_notification_email(upload_response['id'])
-                    print(f"Video uploaded successfully to YouTube. Video ID: {upload_response['id']}")
-            else:
-                print("YouTube upload skipped as per configuration.")
+                    # Upload original video to YouTube
+                    youtube = authenticate_youtube()
+                    upload_response = upload_video(youtube, original_video_path, video_subject, video_subject, tags)
 
-            # Check the environment variable to determine whether to skip Instagram upload
-            skip_ig_upload = os.getenv("SKIP_IG_UPLOAD", "false").lower() == "true"
-
-            if not skip_ig_upload:
-                # If converted video exists, upload it to Instagram
-                if converted_video_url:
-                    print(f"Uploading converted video to Instagram: {converted_video_url}")
-                    instagram_upload_success = publish_video_to_instagram(ig_user_id, converted_video_url, ig_access_token)
+                    if upload_response:
+                        # Send email notification upon successful YouTube upload
+                        send_notification_email(upload_response['id'])
+                        print(f"Video uploaded successfully to YouTube. Video ID: {upload_response['id']}")
                 else:
-                    # If no converted video, upload the original video to Instagram
-                    print(f"No converted video found. Uploading original video to Instagram: {original_video_url}")
-                    instagram_upload_success = publish_video_to_instagram(ig_user_id, original_video_url, ig_access_token)
+                    print("YouTube upload skipped as per configuration.")
 
-                if instagram_upload_success:
-                    send_instagram_notification_email()
-                    print("Email notification sent for successful Instagram upload.")
+                # Check the environment variable to determine whether to skip Instagram upload
+                skip_ig_upload = os.getenv("SKIP_IG_UPLOAD", "false").lower() == "true"
+
+                if not skip_ig_upload:
+                    # If converted video exists, upload it to Instagram
+                    if converted_video_url:
+                        print(f"Uploading converted video to Instagram: {converted_video_url}")
+                        instagram_upload_success = publish_video_to_instagram(ig_user_id, converted_video_url, ig_access_token)
+                    else:
+                        # If no converted video, upload the original video to Instagram
+                        print(f"No converted video found. Uploading original video to Instagram: {original_video_url}")
+                        instagram_upload_success = publish_video_to_instagram(ig_user_id, original_video_url, ig_access_token)
+
+                    if instagram_upload_success:
+                        send_instagram_notification_email()
+                        print("Email notification sent for successful Instagram upload.")
+                    else:
+                        print("Instagram upload failed. No email notification sent.")
                 else:
-                    print("Instagram upload failed. No email notification sent.")
+                    print("Instagram upload skipped as per configuration.")
+            elif language == 'zh':
+                # Upload to Chinese platforms
+                # Download the original video for uploading to Chinese platforms
+                print(f"Downloading original video for Chinese platforms upload: {original_video_url}")
+                original_video_path = video_api_call.download_video(original_video_url, video_subject,
+                                                                    save_path="downloaded_videos")
+
+                # Call the Chinese uploader
+                asyncio.run(upload_to_chinese_platforms(original_video_path, video_subject, video_subject, tags))
             else:
-                print("Instagram upload skipped as per configuration.")
+                print(f"Unsupported language: {language}")
         else:
             print("Failed to generate or download the video.")
+    else:
+        print("Failed to generate video subject.")
+
+# Make the upload_to_chinese_platforms async
+async def upload_to_chinese_platforms(video_path, video_subject, video_script, tags):
+    """
+    Uploads the video to Chinese platforms using the imported async uploader.
+    """
+    # platforms = ['bili', 'douyin', 'xhs']
+    platforms = ['xhs']
+    for platform in platforms:
+        try:
+            platform_name = platform
+            video_url = ""  # Provide actual URL if available
+            video_name = video_subject
+            cover_path = None  # Provide cover image path if available
+            description = video_script
+            topics = tags
+            headless = True  # Set to True if you prefer headless mode
+
+            # Call the asynchronous function
+            await chinese_uploader_main(
+                platform_name=platform_name,
+                video_url=video_url,
+                video_path=video_path,
+                video_name=video_name,
+                cover_path=cover_path,
+                description=description,
+                topics=topics,
+                headless=headless
+            )
+            print(f"Video uploaded successfully to {platform_name}.")
+        except Exception as e:
+            print(f"An error occurred while uploading to {platform}: {e}")
+
 
 def send_notification_email(video_id):
     subject = "Your Latest Youtube Video Uploaded Successfully"

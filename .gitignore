@@ -9,3 +9,7 @@ client_secrets.json
 service_account.json
 /*/__pycache_ls_/*
 last_voice.json
+cookies
+cookies/*
+files
+files/*
