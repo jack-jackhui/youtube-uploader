@@ -1,14 +1,14 @@
 # main.py
-import sys
+# import sys
 import asyncio
 import argparse
 import video_api_call
 from youtube_manager import authenticate_youtube, upload_video
 # import google_sheets
-import openai_chatgpt
+# import openai_chatgpt
 from voice_manager import get_last_used_voice, get_random_voice, store_last_used_voice
 from video_manager import generate_video_subject, process_video_subject, generate_video_and_get_urls
-import json
+# import json
 from dotenv import load_dotenv
 import os
 import test_youtube
@@ -139,10 +139,18 @@ async def upload_to_chinese_platforms(video_path, video_subject, video_script, t
                 headless=headless
             )
             print(f"Video uploaded successfully to {platform_name}.")
+            # Send email notification after successful upload
+            send_chinese_platform_notification_email(platform_name, video_name)
         except Exception as e:
             print(f"An error occurred while uploading to {platform}: {e}")
 
-
+def send_chinese_platform_notification_email(platform_name, video_name):
+    """
+    Sends an email notification after successfully uploading a video to a Chinese platform.
+    """
+    subject = f"Your Latest Video Uploaded Successfully to {platform_name.capitalize()}"
+    body = f"Your video '{video_name}' has been uploaded successfully to {platform_name.capitalize()}!"
+    send_email(subject, body, ["jack_hui@msn.com"])
 def send_notification_email(video_id):
     subject = "Your Latest Youtube Video Uploaded Successfully"
     body = f"Your video has been uploaded successfully to Youtube! Video ID: {video_id}"
