@@ -1,7 +1,11 @@
+import sys
+import os
 from platforms.douyin.uploader import DouyinUploader
 from platforms.xhs.uploader import XhsUploader
 from platforms.bili.uploader import BiliUploader
 import asyncio
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 async def main():
     xhs = XhsUploader()

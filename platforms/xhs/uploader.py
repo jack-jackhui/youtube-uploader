@@ -213,7 +213,7 @@ class XhsUploader(Upload):
             # Wait for the file input to be displayed
             # tab.wait.ele_displayed('input.upload-input[type="file"]', timeout=10)
 
-            upload_button = tab.ele('xpath=/html/body/div[1]/div/div[2]/div/div[2]/main/div[3]/div/div/div[1]/div/div/div/div[2]/div[1]/div/div/button')
+            upload_button = tab.ele('tag:input@@type=button@@pseudo=file-selector-button')
 
             # Ensure the upload button is found
             if not upload_button:
@@ -231,8 +231,14 @@ class XhsUploader(Upload):
             self.logger.info(f"{self.platform}: Video upload initiated")
 
             # Wait for the video upload to complete
-            # tab.wait.ele_hidden('div.process-wrapper', timeout=600)
-            self.logger.info(f"{self.platform}: Video upload completed")
+            cover_image = tab.wait.ele_displayed('tag:div@@class=coverImg', timeout=60)
+            # Check if the cover image element is found
+            if cover_image:
+                self.logger.info(f"{self.platform}: Video cover image successfully loaded")
+            else:
+                self.logger.error(f"{self.platform}: Failed to load video cover image in time")
+                browser.quit()
+                return False  # Exit if cover image is not found
 
             """
             # Ensure the cover image is generated
