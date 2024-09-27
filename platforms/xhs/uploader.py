@@ -249,6 +249,9 @@ class XhsUploader(Upload):
             # Set title and description
             self.logger.info(f"{self.platform}: Setting title")
             title_input = tab.ele('tag:input@@placeholder=填写标题会有更多赞哦～')
+            input_tag_list = tab.eles('tag:input')
+            for index, input_tag in enumerate(input_tag_list):
+                print(f"Input Tags {index}: {input_tag.html}")
             if not title_input:
                 self.logger.error(f"{self.platform}: Title input not found.")
                 browser.quit()
