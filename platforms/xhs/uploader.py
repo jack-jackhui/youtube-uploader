@@ -328,7 +328,7 @@ class XhsUploader(Upload):
 
             # Wait for success confirmation
             self.logger.info(f"{self.platform}: Waiting for success confirmation")
-            tab.wait.url_change('publish/success', timeout=5)
+            tab.wait.url_change('publish/success', timeout=10)
 
             if "publish/success" in tab.url:
                 self.logger.info(f"{self.platform}: Video published successfully")
