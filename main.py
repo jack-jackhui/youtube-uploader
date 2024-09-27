@@ -128,7 +128,7 @@ async def upload_to_chinese_platforms(video_path, video_subject, video_script, t
             headless = True  # Set to True if you prefer headless mode
 
             # Call the asynchronous function
-            await chinese_uploader_main(
+            upload_success = await chinese_uploader_main(
                 platform_name=platform_name,
                 video_url=video_url,
                 video_path=video_path,
@@ -138,9 +138,13 @@ async def upload_to_chinese_platforms(video_path, video_subject, video_script, t
                 topics=topics,
                 headless=headless
             )
-            print(f"Video uploaded successfully to {platform_name}.")
-            # Send email notification after successful upload
-            send_chinese_platform_notification_email(platform_name, video_name)
+            if upload_success:
+                print(f"Video uploaded successfully to {platform_name}.")
+                # Send email notification after successful upload
+                send_chinese_platform_notification_email(platform_name, video_name)
+            else:
+                print(f"Failed to upload video to {platform_name}. No email will be sent.")
+
         except Exception as e:
             print(f"An error occurred while uploading to {platform}: {e}")
 

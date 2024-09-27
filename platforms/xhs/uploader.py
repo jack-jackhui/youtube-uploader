@@ -1,13 +1,14 @@
-import asyncio
+# import asyncio
 import json
-from playwright.async_api import async_playwright
+# from playwright.async_api import async_playwright
 from DrissionPage import Chromium, ChromiumOptions
-import random
+# import random
 from core import config
 from core.upload import Upload
 from utils.util_sqlite import excute_sqlite_sql
 from datetime import datetime
 import os
+from utils.chromium_utils import get_chromium_options
 
 class XhsUploader(Upload):
     """
@@ -161,9 +162,12 @@ class XhsUploader(Upload):
 
         try:
             self.logger.info(f"Uploading video '{video_name}' to {self.platform}...")
+            # Get the ChromiumOptions dynamically
+            co = get_chromium_options(headless=headless)
 
             # Initialize Chromium browser
             self.logger.info(f"{self.platform}: Logging in")
+            """
             co = ChromiumOptions()
             if headless:
                 co.headless()  # Enable headless mode if specified
@@ -179,6 +183,7 @@ class XhsUploader(Upload):
 
             # Clear browser storage (cookies, local storage, etc.)
             co.set_argument('--clear-storage')  # Optional argument to clear storage on every run
+            """
 
             browser = Chromium(co)
 

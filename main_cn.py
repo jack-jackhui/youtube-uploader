@@ -17,17 +17,20 @@ UPLOADERS = {
 async def main(platform_name, video_url, video_path, video_name, cover_path, description, topics, headless=False):
     if check(platform_name, video_name) != 0:
         print(f"Oops!! the {platform_name}:{video_name} have already existed")
-        return
+        return False
     # Ensure the platform is one we know how to handle
     if platform_name not in UPLOADERS:
         print(f"Unsupported platform: {platform_name}")
-        return
+        return False
     # Instantiate the correct uploader class
     uploader_class = UPLOADERS[platform_name]()
     try:
         await uploader_class.upload_video(video_url, video_path, video_name, cover_path, description, topics, headless=headless)
+        print(f"Upload to {platform_name} successful!")
+        return True
     except Exception as e:
         print(f"MAIN:An error occurred: {e}")
+        return False
 
 
 if __name__ == "__main__":
