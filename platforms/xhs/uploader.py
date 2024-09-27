@@ -213,7 +213,7 @@ class XhsUploader(Upload):
             # Wait for the file input to be displayed
             # tab.wait.ele_displayed('input.upload-input[type="file"]', timeout=10)
 
-            upload_button = tab.ele('tag:input@@type=button@@pseudo=file-selector-button')
+            upload_button = tab.ele('tag:input@@class=upload-input@@type=file')
 
             # Ensure the upload button is found
             if not upload_button:

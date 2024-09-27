@@ -1,11 +1,10 @@
 import sys
 import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from platforms.douyin.uploader import DouyinUploader
 from platforms.xhs.uploader import XhsUploader
 from platforms.bili.uploader import BiliUploader
 import asyncio
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 async def main():
     xhs = XhsUploader()
@@ -17,7 +16,7 @@ async def main():
         description="测试",                    # Replace with your video description
         topics=None,                         # Optional: Provide a list of topics
         collection=None,                     # Optional: Provide a collection name
-        headless=False                       # Set to True if you want to run the browser in headless mode
+        headless=True                       # Set to True if you want to run the browser in headless mode
     )
 
     # bili = BiliUploader()
