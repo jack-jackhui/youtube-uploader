@@ -290,7 +290,7 @@ class XhsUploader(Upload):
                         self.logger.info(f"Trying to add topic: {topic}")
                         topic_input = description_area
                         topic_input.input("#" + topic)
-                        tab.wait(2)  # Wait for suggestions to load
+                        tab.wait(1)  # Wait for suggestions to load
                         suggestion_list = tab.ele('tag:ul li@@class=publish-topic-item')
                         if suggestion_list:
                             suggestion_list.click()
