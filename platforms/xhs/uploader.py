@@ -248,31 +248,41 @@ class XhsUploader(Upload):
 
             # Set title and description
             self.logger.info(f"{self.platform}: Setting title")
-            title_input = tab.ele('xpath=/html/body/div[1]/div/div[2]/div/div[2]/main/div[3]/div/div/div[1]/div/div/div/div/div[1]/div[1]/div[1]/div[4]/div[1]/div/input')
+            title_input = tab.ele('tag:input@@placeholder=填写标题会有更多赞哦～')
+            if not title_input:
+                self.logger.error(f"{self.platform}: Title input not found.")
+                browser.quit()
+                return False  # Stop if title input is not found
             # up_title = video_name + "|" + random.choice(config.key_sentence)
             up_title = video_name
-            title_input.input(up_title[:20])
+            title_input.input(up_title[:25])
 
             self.logger.info(f"{self.platform}: Setting description")
-            description_area = tab.ele('xpath=/html/body/div[1]/div/div[2]/div/div[2]/main/div[3]/div/div/div[1]/div/div/div/div/div[1]/div[1]/div[1]/div[5]/p')
+            description_area = tab.ele(
+                'tag:p@@id=post-textarea@@placeholder=在这里输入正文描述，真诚有价值的分享予人温暖')
+            if not description_area:
+                self.logger.error(f"{self.platform}: Description input not found.")
+                browser.quit()
+                return False  # Stop if description input is not found
+
             description_area.click()
             description_area.input(description)
 
             # Add topics
             if topics:
                 self.logger.info(f"{self.platform}: Adding topics")
-                topic_button = tab.ele('xpath=/html/body/div[1]/div/div[2]/div/div[2]/main/div[3]/div/div/div[1]/div/div/div/div/div[1]/div[1]/div[1]/div[5]/div[3]/button[1]')
+                topic_button = tab.ele('tag:button@@id=topicBtn@@class=contentBtn')
                 topic_button.click()
 
                 for topic in topics:
                     try:
                         self.logger.info(f"Trying to add topic: {topic}")
-                        topic_input = tab.ele('xpath=/html/body/div[1]/div/div[2]/div/div[2]/main/div[3]/div/div/div[1]/div/div/div/div/div[1]/div[1]/div[1]/div[5]/p')
+                        topic_input = description_area
                         topic_input.input("#" + topic)
-                        tab.wait(1)  # Wait for suggestions to load
-                        suggestion = tab.ele('ul.el-scrollbar__view li')
-                        if suggestion:
-                            suggestion.click()
+                        tab.wait(2)  # Wait for suggestions to load
+                        suggestion_list = tab.ele('tag:ul li@@class=publish-topic-item')
+                        if suggestion_list:
+                            suggestion_list.click()
                             self.logger.info(f"Topic '{topic}' added")
                         else:
                             self.logger.warning(f"Topic '{topic}' not found")
@@ -297,7 +307,7 @@ class XhsUploader(Upload):
 
             # Publish the video
             self.logger.info(f"{self.platform}: Publishing video")
-            publish_button = tab.ele('xpath=/html/body/div[1]/div/div[2]/div/div[2]/main/div[3]/div/div/div[1]/div/div/div/div/div[2]/div/button[1]')
+            publish_button = tab.ele('tag:button@@class=el-button publishBtn@@text()=发布')
             publish_button.click()
 
             # Wait for success confirmation

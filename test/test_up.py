@@ -13,7 +13,7 @@ async def main():
         description="测试",                    # Replace with your video description
         topics=None,                         # Optional: Provide a list of topics
         collection=None,                     # Optional: Provide a collection name
-        headless=True                       # Set to True if you want to run the browser in headless mode
+        headless=False                       # Set to True if you want to run the browser in headless mode
     )
 
     # bili = BiliUploader()
