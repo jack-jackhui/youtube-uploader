@@ -255,9 +255,11 @@ class XhsUploader(Upload):
             # Set title and description
             self.logger.info(f"{self.platform}: Setting title")
             title_input = tab.ele('tag:input@@placeholder=填写标题会有更多赞哦～')
+            """
             input_tag_list = tab.eles('tag:input')
             for index, input_tag in enumerate(input_tag_list):
                 print(f"Input Tags {index}: {input_tag.html}")
+            """
             if not title_input:
                 self.logger.error(f"{self.platform}: Title input not found.")
                 browser.quit()
@@ -317,6 +319,11 @@ class XhsUploader(Upload):
             # Publish the video
             self.logger.info(f"{self.platform}: Publishing video")
             publish_button = tab.ele('tag:button@@class=el-button publishBtn@@text()=发布')
+            if not publish_button:
+                self.logger.error(f"{self.platform}: Publish button not found.")
+                browser.quit()
+                return False  # Stop if publish button is not found
+
             publish_button.click()
 
             # Wait for success confirmation

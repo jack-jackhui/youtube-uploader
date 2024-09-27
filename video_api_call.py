@@ -144,6 +144,8 @@ def sanitize_filename(filename):
     sanitized = re.sub(r'[^\w\-.]', '_', filename)
     # Convert any non-ASCII characters (e.g., Chinese) to their closest ASCII equivalent
     sanitized = unidecode.unidecode(sanitized)
+    # Replace spaces with underscores after converting non-ASCII characters
+    sanitized = sanitized.replace(" ", "_")
     return sanitized
 
 def download_video(video_url, video_subject, save_path="downloaded_videos"):
