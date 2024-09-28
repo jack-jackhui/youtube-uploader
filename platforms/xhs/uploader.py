@@ -332,11 +332,13 @@ class XhsUploader(Upload):
             # Wait for success confirmation
             self.logger.info(f"{self.platform}: Waiting for success confirmation")
 
+            """
             # Set up screencast recording
             self.logger.info(f"{self.platform}: Setting up screen recording...")
             tab.screencast.set_save_path('video_publish_recording.mp4')  # Set where the recording will be saved
             tab.screencast.set_mode.video_mode()  # Set the recording mode to continuous video
             tab.screencast.start()  # Start recording
+            """
 
             tab.wait.url_change('publish/success', timeout=20)
             current_url = tab.url
@@ -354,13 +356,13 @@ class XhsUploader(Upload):
                     )
                 except Exception as e:
                     self.logger.error(f"Database error: {e}")
-                tab.screencast.stop()
+                # tab.screencast.stop()
                 browser.quit()
                 return True
             else:
                 self.logger.error(f"{self.platform}: url did not change, upload may have failed")
 
-            tab.screencast.stop()
+            # tab.screencast.stop()
             browser.quit()
             return False
 
