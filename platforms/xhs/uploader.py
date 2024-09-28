@@ -8,7 +8,7 @@ from core.upload import Upload
 from utils.util_sqlite import excute_sqlite_sql
 from datetime import datetime
 import os
-from utils.chromium_utils import get_chromium_options
+from utils.chromium_utils import get_chromium_options, check_chromium_running, kill_chromium_processes
 
 class XhsUploader(Upload):
     """
@@ -162,6 +162,12 @@ class XhsUploader(Upload):
 
         try:
             self.logger.info(f"Uploading video '{video_name}' to {self.platform}...")
+            # Ensure no Chromium instances are running
+            if check_chromium_running():
+                self.logger.info(f"Existing Chromium/Chrome processes detected. Killing them...")
+                kill_chromium_processes()
+                self.logger.info(f"All Chromium/Chrome processes killed.")
+
             # Get the ChromiumOptions dynamically
             co = get_chromium_options(headless=headless)
 
@@ -218,6 +224,8 @@ class XhsUploader(Upload):
             # Ensure the upload button is found
             if not upload_button:
                 self.logger.error(f"{self.platform}: Failed to find the upload button for video upload.")
+                print(tab.html)
+                browser.quit()
                 return False
 
             # Use the natural click-to-upload method to handle file selection

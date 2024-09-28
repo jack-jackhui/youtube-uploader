@@ -2,7 +2,54 @@
 import platform
 import shutil
 import os
+import signal
+import subprocess
 from DrissionPage import ChromiumOptions
+
+def kill_chromium_processes():
+    """
+    Kills all running Chromium or Chrome processes.
+    """
+    try:
+        # Find all running Chromium or Chrome processes
+        result = subprocess.run(['pgrep', '-f', 'chromium'], stdout=subprocess.PIPE)
+        pids = result.stdout.decode().splitlines()
+
+        # Also check for Google Chrome processes
+        result_chrome = subprocess.run(['pgrep', '-f', 'chrome'], stdout=subprocess.PIPE)
+        chrome_pids = result_chrome.stdout.decode().splitlines()
+
+        pids += chrome_pids
+
+        # Kill each process
+        for pid in pids:
+            os.kill(int(pid), signal.SIGKILL)
+        print("Killed all Chromium/Chrome processes.")
+    except Exception as e:
+        print(f"Error stopping Chromium/Chrome processes: {e}")
+
+
+def check_chromium_running():
+    """
+    Checks if any Chromium or Chrome processes are running.
+    Returns True if they are running, otherwise False.
+    """
+    try:
+        # Check for running Chromium processes
+        result = subprocess.run(['pgrep', '-f', 'chromium'], stdout=subprocess.PIPE)
+        pids = result.stdout.decode().splitlines()
+
+        # Check for running Google Chrome processes
+        result_chrome = subprocess.run(['pgrep', '-f', 'chrome'], stdout=subprocess.PIPE)
+        chrome_pids = result_chrome.stdout.decode().splitlines()
+
+        if pids or chrome_pids:
+            print(f"Chromium/Chrome is running with PIDs: {pids + chrome_pids}")
+            return True
+        return False
+    except Exception as e:
+        print(f"Error checking Chromium/Chrome processes: {e}")
+        return True  # Assume something is running if there's an error
 
 
 def get_chromium_path():
