@@ -83,7 +83,7 @@ SELECT COUNT(*) FROM media_upload_info WHERE platform = ? AND video_name = ?
 # 关键字
 keywords = [
     "搞笑",
-    "外国人",
+    #"外国人",
     "美女",
     "可爱女孩",
     "恋爱日常",

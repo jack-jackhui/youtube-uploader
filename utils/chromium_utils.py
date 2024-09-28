@@ -60,6 +60,7 @@ def get_chromium_options(headless=False):
     co.set_argument('--disable-application-cache')  # Disable the application cache
     co.set_argument('--disable-site-isolation-trials')  # Disable site isolation for cache clearing
     # co.set_argument('--disable-web-security')  # Disable web security (for testing purposes)
+    co.set_argument('--start-maximized')
 
     # Clear browser storage (cookies, local storage, etc.)
     co.set_argument('--clear-storage')  # Optional argument to clear storage on every run

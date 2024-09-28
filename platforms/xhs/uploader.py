@@ -324,11 +324,23 @@ class XhsUploader(Upload):
                 browser.quit()
                 return False  # Stop if publish button is not found
 
+            url_before_publish = tab.url
+            self.logger.info(f"Current URL before publishing: {url_before_publish}")
+
             publish_button.click()
 
             # Wait for success confirmation
             self.logger.info(f"{self.platform}: Waiting for success confirmation")
-            tab.wait.url_change('publish/success', timeout=10)
+
+            # Set up screencast recording
+            self.logger.info(f"{self.platform}: Setting up screen recording...")
+            tab.screencast.set_save_path('video_publish_recording.mp4')  # Set where the recording will be saved
+            tab.screencast.set_mode.video_mode()  # Set the recording mode to continuous video
+            tab.screencast.start()  # Start recording
+
+            tab.wait.url_change('publish/success', timeout=20)
+            current_url = tab.url
+            self.logger.info(f"Current URL after publishing: {current_url}")
 
             if "publish/success" in tab.url:
                 self.logger.info(f"{self.platform}: Video published successfully")
@@ -342,11 +354,13 @@ class XhsUploader(Upload):
                     )
                 except Exception as e:
                     self.logger.error(f"Database error: {e}")
+                tab.screencast.stop()
                 browser.quit()
                 return True
             else:
-                self.logger.error(f"{self.platform}: '发布成功' message not found, upload may have failed")
+                self.logger.error(f"{self.platform}: url did not change, upload may have failed")
 
+            tab.screencast.stop()
             browser.quit()
             return False
 
