@@ -106,16 +106,27 @@ def get_chromium_options(headless=False):
     co.set_argument('--no-first-run')
     co.auto_port(True)  # Automatically assign a free port
     # co.set_argument(f'--user-data-dir={temp_dir}')
+    # Set custom user agent
+    user_agent = ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                  'AppleWebKit/537.36 (KHTML, like Gecko) '
+                  'Chrome/115.0.0.0 Safari/537.36')
+    co.set_argument(f'--user-agent={user_agent}')
+
+    # Other arguments to prevent detection
+    co.set_argument('--disable-blink-features=AutomationControlled')
+    co.set_argument('--disable-gpu')
+    co.set_argument('--no-sandbox')
+    co.set_argument('--disable-dev-shm-usage')
+    co.set_argument('--disable-setuid-sandbox')
     co.set_argument('--disable-cache')  # Disables the cache
     co.set_argument('--disk-cache-size=0')  # Set cache size to zero
     co.set_argument('--media-cache-size=0')  # Disable media cache
-    co.set_argument('--no-sandbox')  # Disable sandboxing
     co.set_argument('--disable-application-cache')  # Disable the application cache
     co.set_argument('--aggressive-cache-discard')
     co.set_argument('--disable-site-isolation-trials')  # Disable site isolation for cache clearing
     # co.set_argument('--disable-web-security')  # Disable web security (for testing purposes)
-    co.set_argument('--start-maximized')
-    co.set_argument('--guest')
+    co.set_argument('--window-size=1920,1080')
+    # co.set_argument('--guest')
     # Clear browser storage (cookies, local storage, etc.)
     co.set_argument('--clear-storage')  # Optional argument to clear storage on every run
 
