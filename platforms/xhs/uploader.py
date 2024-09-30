@@ -240,10 +240,12 @@ class XhsUploader(Upload):
 
             # Wait for the video upload to complete
             cover_image = tab.wait.ele_displayed('tag:div@@class=coverImg', timeout=60)
+            tab.get_screenshot(path='tmp', name='screenshot_1.jpg', full_page=True)
             # Check if the cover image element is found
             if cover_image:
                 self.logger.info(f"{self.platform}: Video cover image successfully loaded")
             else:
+                tab.get_screenshot(path='tmp', name='screenshot_2.jpg', full_page=True)
                 self.logger.error(f"{self.platform}: Failed to load video cover image in time")
                 browser.quit()
                 return False  # Exit if cover image is not found
