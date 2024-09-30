@@ -101,6 +101,7 @@ def get_chromium_options(headless=False):
 
     if headless:
         co.headless()  # Enable headless mode if specified
+    co.new_env()
     co.incognito()  # Set browser to incognito mode
     co.set_argument('--no-first-run')
     co.auto_port(True)  # Automatically assign a free port
