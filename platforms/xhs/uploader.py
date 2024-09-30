@@ -10,6 +10,7 @@ from datetime import datetime
 import os
 from utils.chromium_utils import get_chromium_options, check_chromium_running, kill_chromium_processes
 
+
 class XhsUploader(Upload):
     """
     开始上传,包括以下几个部分:
@@ -18,7 +19,8 @@ class XhsUploader(Upload):
     """
     platform = "xhs"
 
-    async def upload_video(self, video_url, video_path, video_name, cover_path=None, description=None, topics=None, collection=None,
+    async def upload_video(self, video_url, video_path, video_name, cover_path=None, description=None, topics=None,
+                           collection=None,
                            headless=False):
         if topics is None:
             topics = []
@@ -379,10 +381,3 @@ class XhsUploader(Upload):
         except Exception as e:
             print(f"An error occurred during the upload: {e}")
             return False
-
-        finally:
-            # Ensure the browser is closed and temp_dir is deleted
-            if 'browser' in locals():
-                browser.quit()
-            if os.path.exists(temp_dir):
-                shutil.rmtree(temp_dir)
