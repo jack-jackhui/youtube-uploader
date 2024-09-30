@@ -379,3 +379,10 @@ class XhsUploader(Upload):
         except Exception as e:
             print(f"An error occurred during the upload: {e}")
             return False
+
+        finally:
+            # Ensure the browser is closed and temp_dir is deleted
+            if 'browser' in locals():
+                browser.quit()
+            if os.path.exists(temp_dir):
+                shutil.rmtree(temp_dir)
