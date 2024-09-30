@@ -10,7 +10,7 @@ async def main():
     xhs = XhsUploader()
     await xhs.upload_video(
         video_url="",          # Replace with your actual video URL or a placeholder
-        video_path="../downloaded_videos/_AIZhi Neng Zhu Shou _Wei Lai Sheng Huo Xin Fang Shi __.mp4",   # Replace with the correct path to your video file
+        video_path="../downloaded_videos/__________ChatGPT______________.mp4",   # Replace with the correct path to your video file
         video_name="AI 智能助手 - 未来生活新方式",             # Replace with your desired video title
         cover_path=None,                     # If you have a cover image, provide the path; otherwise, use None
         description="AI 智能助手 - 未来生活新方式",                    # Replace with your video description

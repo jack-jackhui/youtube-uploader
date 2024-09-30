@@ -57,14 +57,23 @@ def get_chromium_path():
     """
     Returns the path to the Chromium or Chrome executable depending on the OS.
     """
+    # Define the custom Chromium path based on your installation script
+    custom_chromium_path = '/home/ubuntu/chromium/chromium-latest-linux/latest/chrome'  # Update this path as needed
+
     # For Linux/Ubuntu
     if platform.system() == "Linux":
-        # Try to find Chromium or Chrome
-        paths = ['chromium-browser', 'google-chrome']
-        for path in paths:
-            chromium_path = shutil.which(path)
-            if chromium_path:
-                return chromium_path
+        # Check if custom Chromium path exists
+        if os.path.exists(custom_chromium_path):
+            return custom_chromium_path
+        else:
+            # Try to find Chromium or Chrome in standard locations
+            paths = ['chromium-browser', 'google-chrome']
+            for path in paths:
+                chromium_path = shutil.which(path)
+                if chromium_path:
+                    return chromium_path
+            # If Chromium is not found, raise an exception
+            raise Exception("Chromium executable not found. Please ensure Chromium is installed.")
 
     # For macOS
     elif platform.system() == "Darwin":  # Darwin is the system name for macOS
