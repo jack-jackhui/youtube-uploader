@@ -164,11 +164,13 @@ class XhsUploader(Upload):
 
         try:
             self.logger.info(f"Uploading video '{video_name}' to {self.platform}...")
+            """
             # Ensure no Chromium instances are running
             if check_chromium_running():
                 self.logger.info(f"Existing Chromium/Chrome processes detected. Killing them...")
                 kill_chromium_processes()
                 self.logger.info(f"All Chromium/Chrome processes killed.")
+            """
 
             # Get the ChromiumOptions dynamically
             co = get_chromium_options(headless=headless)
@@ -242,12 +244,12 @@ class XhsUploader(Upload):
 
             # Wait for the video upload to complete
             cover_image = tab.wait.ele_displayed('tag:div@@class=coverImg', timeout=60)
-            tab.get_screenshot(path='tmp', name='screenshot_1.jpg', full_page=True)
+            # tab.get_screenshot(path='tmp', name='screenshot_1.jpg', full_page=True)
             # Check if the cover image element is found
             if cover_image:
                 self.logger.info(f"{self.platform}: Video cover image successfully loaded")
             else:
-                tab.get_screenshot(path='tmp', name='screenshot_2.jpg', full_page=True)
+                # tab.get_screenshot(path='tmp', name='screenshot_2.jpg', full_page=True)
                 self.logger.error(f"{self.platform}: Failed to load video cover image in time")
                 browser.quit()
                 return False  # Exit if cover image is not found
