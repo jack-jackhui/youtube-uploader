@@ -5,27 +5,25 @@ import os
 import signal
 import subprocess
 from DrissionPage import ChromiumOptions
+import psutil
 # import tempfile
 
 def kill_chromium_processes():
     """
-    Kills all running Chromium or Chrome processes.
+    Kills all running Chromium or Chrome processes on Linux, macOS, and Windows.
     """
     try:
-        # Find all running Chromium or Chrome processes
-        result = subprocess.run(['pgrep', '-f', 'chromium'], stdout=subprocess.PIPE)
-        pids = result.stdout.decode().splitlines()
+        # Define process names to look for
+        process_names = ['chromium', 'chrome', 'chromedriver', 'chrome.exe', 'chromium.exe']
 
-        # Also check for Google Chrome processes
-        result_chrome = subprocess.run(['pgrep', '-f', 'chrome'], stdout=subprocess.PIPE)
-        chrome_pids = result_chrome.stdout.decode().splitlines()
-
-        pids += chrome_pids
-
-        # Kill each process
-        for pid in pids:
-            os.kill(int(pid), signal.SIGKILL)
-        print("Killed all Chromium/Chrome processes.")
+        for proc in psutil.process_iter(['pid', 'name']):
+            try:
+                # Check if process name matches any in our list
+                if proc.info['name'].lower() in process_names:
+                    proc.kill()
+                    print(f"Killed process {proc.info['name']} (PID: {proc.pid})")
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                pass
     except Exception as e:
         print(f"Error stopping Chromium/Chrome processes: {e}")
 
@@ -36,18 +34,37 @@ def check_chromium_running():
     Returns True if they are running, otherwise False.
     """
     try:
-        # Check for running Chromium processes
-        result = subprocess.run(['pgrep', '-f', 'chromium'], stdout=subprocess.PIPE)
-        pids = result.stdout.decode().splitlines()
+        # Define process names to look for
+        process_names = ['chromium', 'chrome', 'chromedriver', 'chrome.exe', 'chromium.exe']
+        running = False
 
-        # Check for running Google Chrome processes
-        result_chrome = subprocess.run(['pgrep', '-f', 'chrome'], stdout=subprocess.PIPE)
-        chrome_pids = result_chrome.stdout.decode().splitlines()
+        for proc in psutil.process_iter(['name']):
+            if proc.info['name'].lower() in process_names:
+                print(f"Chromium/Chrome is running with PID: {proc.pid}")
+                running = True
 
-        if pids or chrome_pids:
-            print(f"Chromium/Chrome is running with PIDs: {pids + chrome_pids}")
-            return True
-        return False
+        return running
+    except Exception as e:
+        print(f"Error checking Chromium/Chrome processes: {e}")
+        return True  # Assume something is running if there's an error
+
+
+def check_chromium_running():
+    """
+    Checks if any Chromium or Chrome processes are running.
+    Returns True if they are running, otherwise False.
+    """
+    try:
+        # Define process names to look for
+        process_names = ['chromium', 'chrome', 'chromedriver', 'chrome.exe', 'chromium.exe']
+        running = False
+
+        for proc in psutil.process_iter(['name']):
+            if proc.info['name'].lower() in process_names:
+                print(f"Chromium/Chrome is running with PID: {proc.pid}")
+                running = True
+
+        return running
     except Exception as e:
         print(f"Error checking Chromium/Chrome processes: {e}")
         return True  # Assume something is running if there's an error
@@ -60,14 +77,15 @@ def get_chromium_path():
     # Define the custom Chromium path based on your installation script
     custom_chromium_path = '/home/ubuntu/chromium/chromium-latest-linux/latest/chrome'  # Update this path as needed
 
-    # For Linux/Ubuntu
-    if platform.system() == "Linux":
+    system_name = platform.system()
+
+    if system_name == "Linux":
         # Check if custom Chromium path exists
         if os.path.exists(custom_chromium_path):
             return custom_chromium_path
         else:
             # Try to find Chromium or Chrome in standard locations
-            paths = ['chromium-browser', 'google-chrome']
+            paths = ['chromium-browser', 'google-chrome', 'chromium', '/snap/bin/chromium']
             for path in paths:
                 chromium_path = shutil.which(path)
                 if chromium_path:
@@ -75,26 +93,37 @@ def get_chromium_path():
             # If Chromium is not found, raise an exception
             raise Exception("Chromium executable not found. Please ensure Chromium is installed.")
 
-    # For macOS
-    elif platform.system() == "Darwin":  # Darwin is the system name for macOS
+    elif system_name == "Darwin":  # macOS
         chromium_path = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
         if os.path.exists(chromium_path):
             return chromium_path
+        else:
+            # Try to find Chromium in standard locations
+            paths = ['chromium-browser', 'google-chrome']
+            for path in paths:
+                chromium_path = shutil.which(path)
+                if chromium_path:
+                    return chromium_path
+            raise Exception("Chromium executable not found. Please ensure Chromium is installed.")
 
-    # For Windows
-    elif platform.system() == "Windows":
+    elif system_name == "Windows":
+        # Common installation paths for Chrome on Windows
         possible_paths = [
-            r"C:\Program Files\Google\Chrome\Application\chrome.exe",
-            r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+            os.path.expandvars(r"%ProgramFiles%\Google\Chrome\Application\chrome.exe"),
+            os.path.expandvars(r"%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe"),
+            os.path.expandvars(r"%LocalAppData%\Google\Chrome\Application\chrome.exe"),
         ]
         for path in possible_paths:
             if os.path.exists(path):
                 return path
+        # Use shutil.which to find chrome.exe in PATH
+        chromium_path = shutil.which('chrome.exe')
+        if chromium_path:
+            return chromium_path
+        raise Exception("Chromium executable not found. Please ensure Chrome is installed.")
 
-    # Return None if not found
-    return None
-
-
+    else:
+        raise Exception(f"Unsupported operating system: {system_name}")
 def get_chromium_options(headless=False):
     """
     Configures ChromiumOptions with dynamic path detection for Chromium/Chrome.
@@ -110,6 +139,7 @@ def get_chromium_options(headless=False):
 
     if headless:
         co.headless()  # Enable headless mode if specified
+        co.set_argument('--headless=new')
     co.new_env()
     co.incognito()  # Set browser to incognito mode
     co.set_argument('--no-first-run')
