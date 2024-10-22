@@ -213,13 +213,8 @@ class XhsUploader(Upload):
 
             # Now navigate to the upload page
             tab.get(config.xhs_config["up_site"])
-            self.logger.info(f"{self.platform}: Logged in successfully")
+            tab.wait.load_start()  # Wait for the page to fully load
 
-            # Ensure the page loads successfully
-            tab.wait.load_start()
-
-            # Upload the video
-            self.logger.info(f"{self.platform}: Uploading video")
             # Wait for the file input to be displayed
             # tab.wait.ele_displayed('input.upload-input[type="file"]', timeout=10)
 
@@ -228,7 +223,7 @@ class XhsUploader(Upload):
             # Ensure the upload button is found
             if not upload_button:
                 self.logger.error(f"{self.platform}: Failed to find the upload button for video upload.")
-                print(tab.html)
+                tab.get_screenshot(path='tmp', name='login_failed.png', full_page=True)
                 browser.quit()
                 return False
 

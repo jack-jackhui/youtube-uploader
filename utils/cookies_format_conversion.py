@@ -2,7 +2,7 @@ import json
 import time
 
 # Load the cookies from the file you have
-with open('../cookies/xhs_cookies_raw2.json', 'r') as infile:
+with open('../cookies/xhs_cookies_raw3.json', 'r') as infile:
     raw_cookies = json.load(infile)
 
 # Function to map sameSite values
@@ -39,7 +39,7 @@ storage_state = {
 }
 
 # Save the transformed cookies to a new file
-with open('../cookies/xhs_cookies2.json', 'w') as outfile:
+with open('../cookies/xhs_cookies3.json', 'w') as outfile:
     json.dump(storage_state, outfile, indent=2)
 
-print("Cookies have been converted and saved to xhs_cookies2.json")
+print("Cookies have been converted and saved to xhs_cookies3.json")
