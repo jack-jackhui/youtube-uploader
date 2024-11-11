@@ -327,7 +327,7 @@ class XhsUploader(Upload):
 
             # Publish the video
             self.logger.info(f"{self.platform}: Publishing video")
-            publish_button = tab.ele('tag:button@@class=el-button publishBtn@@text()=发布')
+            publish_button = tab.ele('button.publishBtn:has-text("发布")')
             if not publish_button:
                 self.logger.error(f"{self.platform}: Publish button not found.")
                 tab.get_screenshot(path='tmp', name='publishbutton_error.jpg', full_page=True)
