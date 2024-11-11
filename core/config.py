@@ -82,13 +82,13 @@ SELECT COUNT(*) FROM media_upload_info WHERE platform = ? AND video_name = ?
 """
 # 关键字
 keywords = [
-    "搞笑",
-    #"外国人",
+    "游戏",
+    "漫画",
     "美女",
     "可爱女孩",
     "恋爱日常",
     "原神",
-    "王者荣耀",
+    "原宇宙",
 ]
 douyin_keywords = [
     "搞笑",

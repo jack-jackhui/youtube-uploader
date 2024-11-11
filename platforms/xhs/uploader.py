@@ -330,6 +330,7 @@ class XhsUploader(Upload):
             publish_button = tab.ele('tag:button@@class=el-button publishBtn@@text()=发布')
             if not publish_button:
                 self.logger.error(f"{self.platform}: Publish button not found.")
+                tab.get_screenshot(path='tmp', name='publishbutton_error.jpg', full_page=True)
                 browser.quit()
                 return False  # Stop if publish button is not found
 
