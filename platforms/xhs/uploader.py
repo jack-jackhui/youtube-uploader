@@ -279,7 +279,7 @@ class XhsUploader(Upload):
 
             self.logger.info(f"{self.platform}: Setting description")
             description_area = tab.ele(
-                'tag:p@@id=post-textarea@@placeholder=在这里输入正文描述，真诚有价值的分享予人温暖')
+                '@@tag()=div@@data-placeholder=输入正文描述，真诚有价值的分享予人温暖')
             if not description_area:
                 self.logger.error(f"{self.platform}: Description input not found.")
                 browser.quit()
