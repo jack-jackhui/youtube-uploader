@@ -81,6 +81,8 @@ table_select_name_count_sql = """
 SELECT COUNT(*) FROM media_upload_info WHERE platform = ? AND video_name = ?
 """
 # 关键字
+# keywords = []
+
 keywords = [
     "游戏",
     "漫画",
@@ -90,6 +92,7 @@ keywords = [
     "原神",
     "原宇宙",
 ]
+
 douyin_keywords = [
     "搞笑",
     "外国人",

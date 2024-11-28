@@ -64,3 +64,7 @@ uritemplate==4.1.1
 urllib3==2.2.3
 websocket-client==1.8.0
 wheel==0.41.2
+newspaper3k
+feedparser~=6.0.11
+textstat~=0.7.4
+tranco~=0.8.1
