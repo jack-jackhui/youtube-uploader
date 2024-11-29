@@ -68,3 +68,4 @@ newspaper3k
 feedparser~=6.0.11
 textstat~=0.7.4
 tranco~=0.8.1
+lxml_html_clean
