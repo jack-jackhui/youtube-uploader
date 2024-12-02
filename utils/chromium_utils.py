@@ -124,7 +124,7 @@ def get_chromium_path():
 
     else:
         raise Exception(f"Unsupported operating system: {system_name}")
-def get_chromium_options(headless=False):
+def get_chromium_options(headless=False, user_data_dir=None):
     """
     Configures ChromiumOptions with dynamic path detection for Chromium/Chrome.
     """
@@ -136,6 +136,10 @@ def get_chromium_options(headless=False):
 
     co = ChromiumOptions()
     co.set_browser_path(chromium_path)  # Set the detected path
+
+    # Set persistent user data directory
+    if user_data_dir:
+        co.set_argument(f"--user-data-dir={user_data_dir}")
 
     if headless:
         co.headless()  # Enable headless mode if specified

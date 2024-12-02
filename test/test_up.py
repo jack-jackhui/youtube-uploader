@@ -1,30 +1,61 @@
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from platforms.douyin.uploader import DouyinUploader
-from platforms.xhs.uploader import XhsUploader
-from platforms.bili.uploader import BiliUploader
 import asyncio
+from datetime import datetime
+
+# Add the parent directory to the sys.path to import platform-specific uploaders
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from platforms.xhs.uploader import XhsUploader  # Ensure this is the updated uploader class
+
 
 async def main():
+    # Instantiate the XhsUploader
     xhs = XhsUploader()
-    await xhs.upload_video(
-        video_url="",          # Replace with your actual video URL or a placeholder
-        video_path="../downloaded_videos/_Unleashing_the_power_of_AI_in_transforming_our_digital_world_-_how_artificial_intelligence_is_shaping_the_future_of_technology__.mp4",   # Replace with the correct path to your video file
-        video_name="释放人工智能在变革我们数字世界中的力量 —— 人工智能如何塑造技术的未来",             # Replace with your desired video title
-        cover_path=None,                     # If you have a cover image, provide the path; otherwise, use None
-        description="释放人工智能在变革我们数字世界中的力量 —— 人工智能如何塑造技术的未来",                    # Replace with your video description
-        topics=None,                         # Optional: Provide a list of topics
-        collection=None,                     # Optional: Provide a collection name
-        headless=False                      # Set to True if you want to run the browser in headless mode
-    )
 
-    # bili = BiliUploader()
-    # await bili.upload_video("https://00.mp4", "../files/test/00.mp4", "00", "20240114", [], "测试")
-    # douyin = DouyinUploader()
-    # await douyin.upload_video("https://00.mp4", "../files/test/00.mp4", "00", "20240114", [], "测试")
+    # Define test inputs
+    video_path = "../downloaded_videos/_Can_AI-Powered_ChatGPT_Ace_Your_Toughest_Interview_Questions__.mp4"
+    video_name = "人工智能能否通过高难度面试"
+    description = "人工智能能否通过高难度面试"
+    topics = ["人工智能", "技术未来"]
+    cookie_path = "cookies.json"  # Path to your cookie file
+
+    # Test process
+    try:
+        # Start the browser
+        xhs.start_browser(headless=False)
+
+        # Load cookies
+        xhs.load_cookies()
+
+        # Refresh the session
+        xhs.refresh_session()
+
+        # Upload the video
+        success = xhs.upload_video(
+            video_path=video_path,
+            video_name=video_name,
+            description=description,
+            topics=topics,
+            collection=None  # Optional: Provide a collection name if needed
+        )
+
+        if success:
+            print(f"Test succeeded: Video '{video_name}' uploaded successfully.")
+        else:
+            print(f"Test failed: Video '{video_name}' upload encountered an issue.")
+
+        # Save cookies for future runs
+        xhs.save_cookies()
+
+    except Exception as e:
+        print(f"An error occurred during the test: {e}")
+
+    finally:
+        # Disconnect but keep the browser running
+        xhs.stop_browser()
 
 
 if __name__ == "__main__":
-    # 运行主函数
+    # Run the asynchronous main function
     asyncio.run(main())
