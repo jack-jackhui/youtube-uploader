@@ -44,8 +44,14 @@ if __name__ == "__main__":
 
 """
 
+import sys
 import asyncio
 import os
+
+# Add the parent directory to sys.path
+script_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.abspath(os.path.join(script_dir, '..'))
+sys.path.append(parent_dir)
 from platforms.xhs.uploader import XhsUploader  # Ensure this is your old uploader class
 
 async def main():
