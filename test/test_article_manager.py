@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 def main():
     try:
         logger.info("Starting test of get_recent_articles()")
-        articles = get_recent_articles(max_articles=5)
+        articles = get_recent_articles(max_articles=9999)
 
         if articles:
             logger.info(f"Fetched {len(articles)} articles:")

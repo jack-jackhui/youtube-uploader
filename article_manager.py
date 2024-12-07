@@ -32,7 +32,7 @@ def clean_text(text):
 def get_full_text(url):
     """Retrieve the full text of an article from its URL using newspaper3k."""
     try:
-        article = Article(url)
+        article = Article(url, browser_user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36')
         article.download()
         article.parse()
         return article.text
@@ -142,7 +142,13 @@ def get_recent_articles(max_articles=5):
                     # Try to fetch the full text, falling back to summary if needed
                     full_text = get_full_text(link)
                     if not full_text:
-                        full_text = clean_text(entry.get('summary', 'Summary not available.'))
+                        # Check if entry has 'content' field with rich text
+                        if hasattr(entry, 'content') and entry.content and 'value' in entry.content[0]:
+                            raw_content = entry.content[0].value
+                            full_text = clean_text(raw_content)
+                        else:
+                            # Fallback to summary if content isn't available
+                            full_text = clean_text(entry.get('summary', 'Summary not available.'))
 
                     # Lowercase the text for case-insensitive matching
                     title_lower = entry.title.lower()
