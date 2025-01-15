@@ -53,17 +53,18 @@ class XhsUploader(Upload):
 
             # Now navigate to the upload page
             tab.get(config.xhs_config["up_site"])
+            # print(config.xhs_config["up_site"])
             tab.wait.load_start()  # Wait for the page to fully load
 
             # Wait for the file input to be displayed
             # tab.wait.ele_displayed('input.upload-input[type="file"]', timeout=10)
 
-            upload_button = tab.ele('tag:input@@class=upload-input@@type=file')
-
+            upload_button=tab.ele('tag:input@@class=upload-input@@type=file')
             # Ensure the upload button is found
             if not upload_button:
                 self.logger.error(f"{self.platform}: Failed to find the upload button for video upload.")
                 tab.get_screenshot(path='tmp', name='login_failed.png', full_page=True)
+                # print(upload_button)
                 browser.quit()
                 return False
 
@@ -78,16 +79,18 @@ class XhsUploader(Upload):
             self.logger.info(f"{self.platform}: Video upload initiated")
 
             # Wait for the video upload to complete
-            cover_image = tab.wait.ele_displayed('tag:div@@class=coverImg', timeout=60)
+            video_upload_complete = tab.wait.ele_displayed('@text()=上传成功')
+
+            # cover_image = tab.wait.ele_displayed('tag:div@@class=coverImg', timeout=60)
             # tab.get_screenshot(path='tmp', name='screenshot_1.jpg', full_page=True)
             # Check if the cover image element is found
-            if cover_image:
-                self.logger.info(f"{self.platform}: Video cover image successfully loaded")
-            else:
+            # if cover_image:
+            #    self.logger.info(f"{self.platform}: Video cover image successfully loaded")
+            # else:
                 # tab.get_screenshot(path='tmp', name='screenshot_2.jpg', full_page=True)
-                self.logger.error(f"{self.platform}: Failed to load video cover image in time")
-                browser.quit()
-                return False  # Exit if cover image is not found
+            #    self.logger.error(f"{self.platform}: Failed to load video cover image in time")
+            #    browser.quit()
+            #    return False  # Exit if cover image is not found
 
             # Set title and description
             self.logger.info(f"{self.platform}: Setting title")
