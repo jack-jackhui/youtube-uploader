@@ -57,13 +57,16 @@ class XhsUploader(Upload):
             tab.wait.load_start()  # Wait for the page to fully load
 
             # Wait for the file input to be displayed
-            # tab.wait.ele_displayed('input.upload-input[type="file"]', timeout=10)
+            input_displayed=tab.wait.ele_displayed('tag:input')
+            print(input_displayed)
 
             upload_button=tab.ele('tag:input@@class=upload-input@@type=file')
+            
             # Ensure the upload button is found
             if not upload_button:
                 self.logger.error(f"{self.platform}: Failed to find the upload button for video upload.")
                 tab.get_screenshot(path='tmp', name='login_failed.png', full_page=True)
+                print(tab.html)                
                 # print(upload_button)
                 browser.quit()
                 return False
