@@ -20,8 +20,22 @@ def initialize_tranco_list():
     global latest_list
     if latest_list is None:
         t = Tranco(cache=True, cache_dir='.tranco')
-        latest_list = t.list()
-        logger.info('Tranco list initialized.')
+        date_to_try = datetime.today().strftime('%Y-%m-%d')
+        retries = 3
+        for _ in range(retries):
+            try:
+                latest_list = t.list(date=date_to_try)
+                logger.info('Tranco list initialized.')
+                logger.info(f'Using Tranco list for date: {date_to_try}')
+                return latest_list
+            except AttributeError:
+                # Try previous day if latest fails
+                date_to_try = (datetime.strptime(date_to_try, '%Y-%m-%d') - timedelta(days=1)).strftime('%Y-%m-%d')
+        try:
+            return t.list(date='latest-30')
+        except Exception as e:
+            logger.error(f"Fallback to monthly list failed: {e}")
+            raise
     else:
         logger.info('Tranco list already initialized.')
 

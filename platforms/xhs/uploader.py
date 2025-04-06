@@ -60,7 +60,20 @@ class XhsUploader(Upload):
             input_displayed=tab.wait.ele_displayed('tag:input')
             print(input_displayed)
 
-            upload_button=tab.ele('tag:input@@class=upload-input@@type=file')
+            # Find upload button with retry logic
+            max_retries = 3
+            retry_count = 0
+            upload_button = None
+
+            while retry_count < max_retries:
+                upload_button = tab.ele('tag:input@@class=upload-input@@type=file')
+                if upload_button:
+                    self.logger.info(f"{self.platform}: Upload button found on attempt {retry_count + 1}")
+                    break
+                else:
+                    self.logger.warning(f"{self.platform}: Upload button not found on attempt {retry_count + 1}. Retrying in 1 second...")
+                    tab.wait(1)  # Wait 1 second before retrying
+                    retry_count += 1
             
             # Ensure the upload button is found
             if not upload_button:
