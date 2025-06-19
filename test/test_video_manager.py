@@ -2,7 +2,12 @@
 
 import logging
 import os
+import sys
 from dotenv import load_dotenv
+# Add parent directory to Python path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+root_dir = os.path.abspath(os.path.join(current_dir, '..'))
+sys.path.insert(0, root_dir)  # Add root directory to search path
 
 # Import the necessary functions
 from video_manager import generate_video_subject, process_video_subject
@@ -45,7 +50,7 @@ def main():
         return
 
     # Set the language ('en' for English or 'zh' for Chinese)
-    language = 'en'  # Change to 'en' if needed
+    language = 'zh'  # Change to 'en' if needed
 
     # Fetch the latest articles
     logger.info("Fetching latest articles...")
@@ -70,6 +75,7 @@ def main():
         return
 
     # Process the video subject to get the script and terms
+    """
     logger.info("Processing video subject to generate script and terms...")
     video_script, video_terms, tags = process_video_subject(video_subject, language)
     if video_script and video_terms:
@@ -78,6 +84,6 @@ def main():
         logger.info(f"Tags: {tags}")
     else:
         logger.error("Failed to generate video script and terms.")
-
+    """
 if __name__ == "__main__":
     main()
