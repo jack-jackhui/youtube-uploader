@@ -75,7 +75,7 @@ def main():
         return
 
     # Process the video subject to get the script and terms
-    """
+    
     logger.info("Processing video subject to generate script and terms...")
     video_script, video_terms, tags = process_video_subject(video_subject, language)
     if video_script and video_terms:
@@ -84,6 +84,6 @@ def main():
         logger.info(f"Tags: {tags}")
     else:
         logger.error("Failed to generate video script and terms.")
-    """
+    
 if __name__ == "__main__":
     main()

@@ -11,13 +11,13 @@ cd "$(dirname "$0")"
 export ENV="production"  # Change to "dev" for development environment
 
 # Activate the virtual environment
-source "/c/Users/jack_/youtube-uploader/venv/bin/activate"
+source "/c/Users/jack/Python-Apps/youtube-uploader/venv/bin/activate"
 
 # Run your Python script to generate and upload English video
 # python "/c/Users/YourUsername/youtube-uploader/main.py" --language en
 
 # Run your Python script to generate and upload Chinese video
-python "/c/Users/jack_/youtube-uploader/main.py" --language zh
+python "/c/Users/jack/Python-Apps/youtube-uploader/main.py" --language zh
 
 # Run test script
 # python "/c/Users/YourUsername/youtube-uploader/test/test_up.py"

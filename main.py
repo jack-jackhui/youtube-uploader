@@ -33,10 +33,14 @@ openai_api_key = os.getenv('OPEN_AI_KEY')  # Retrieve securely
 ig_user_id = os.getenv("IG_USER_ID")  # Instagram User ID
 ig_access_token = os.getenv("IG_ACCESS_TOKEN")  # Instagram Access Token
 
+print("main.py is starting up")
+
 def main():
+    print("Entered main()")
     parser = argparse.ArgumentParser(description="Generate and upload videos to various platforms.")
     parser.add_argument('--language', choices=['en', 'zh'], default='en', help="Language of the video ('en' for English, 'zh' for Chinese).")
     args = parser.parse_args()
+    print("Args parsed:", args)
 
     language = args.language
 

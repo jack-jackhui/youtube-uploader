@@ -2,7 +2,7 @@ import json
 import time
 
 # Load the cookies from the file you have
-with open('../cookies/xhs_cookies_raw3.json', 'r') as infile:
+with open('../cookies/xhs_cookies_raw.json', 'r') as infile:
     raw_cookies = json.load(infile)
 
 # Function to map sameSite values

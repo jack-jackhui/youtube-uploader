@@ -61,9 +61,7 @@ Do not include more than one topic in a single video subject. Limit the number o
 
 {news_content}
 你的视频主题应捕捉这些文章所传达的整体主题、趋势或深刻见解，提供超越单篇文章的新鲜视角。
-确保视频主题专注于最新的科技发展：
-
-不要在单个视频主题中包含多个主题。限制字符数不超过25个字。
+确保视频主题专注于最新的科技发展。不要在单个视频主题中包含多个主题。限制字符数不超过25个字。
 """
 
     # Generate video subject using OpenAI

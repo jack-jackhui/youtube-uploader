@@ -14,3 +14,6 @@ cookies/*
 files
 files/*
 test/video_publish_recording.mp4
+core/log/media_uploader.db
+core/__pycache__
+platforms/__pycache__

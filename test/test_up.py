@@ -45,8 +45,12 @@ if __name__ == "__main__":
 """
 
 import sys
+import io
 import asyncio
 import os
+
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 # Add the parent directory to sys.path
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -59,9 +63,9 @@ async def main():
 
     # Define test inputs
     video_url = ""  # Provide the video URL if necessary; in your old code, this parameter is required
-    video_path = "../downloaded_videos/_Can_AI-Powered_ChatGPT_Ace_Your_Toughest_Interview_Questions__.mp4"
-    video_name = "人工智能可以通过最难的面试吗？"
-    description = "人工智能可以通过最难的面试吗？"
+    video_path = "../downloaded_videos/Ren_Gong_Zhi_Neng_Hui_Qu_Dai_Ni_De_Gong_Zuo_Ma__.mp4"
+    video_name = "人工智能会取代你的工作吗？"
+    description = "人工智能会取代你的工作吗？"
     topics = ["面试", "人工智能"]
 
     # Since the old code initializes the browser and loads cookies within upload_video,
@@ -77,10 +81,11 @@ async def main():
         headless=False  # Set to True if you want to run the browser in headless mode
     )
 
+    # Safe print using UTF-8
     if success:
-        print(f"Video '{video_name}' uploaded successfully.")
+        sys.stdout.buffer.write(f"视频 '{video_name}' 上传成功！\n".encode('utf-8'))
     else:
-        print(f"Failed to upload video '{video_name}'.")
+        sys.stdout.buffer.write(f"视频 '{video_name}' 上传失败\n".encode('utf-8'))
 
     # No need to call save_cookies or stop_browser since the old code handles browser closure internally.
 
