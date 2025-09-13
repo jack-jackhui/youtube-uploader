@@ -17,3 +17,13 @@ test/video_publish_recording.mp4
 core/log/media_uploader.db
 core/__pycache__
 platforms/__pycache__
+test/
+*.log
+__pycache__
+__pycache__/
+test_youtube.py
+platforms/bili/__pycache__/
+platforms/douyin/__pycache__/
+platforms/toutiao/__pycache__/
+platforms/xhs/__pycache__/
+.tranco/
