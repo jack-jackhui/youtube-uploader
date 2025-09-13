@@ -79,7 +79,10 @@ class XhsUploader(Upload):
             if not upload_button:
                 self.logger.error(f"{self.platform}: Failed to find the upload button for video upload.")
                 tab.get_screenshot(path='tmp', name='login_failed.png', full_page=True)
-                print(tab.html)                
+                html_file = os.path.join('tmp', 'page_source.html')
+                with open(html_file, 'w', encoding='utf-8') as f:
+                    f.write(tab.html)
+                self.logger.error(f"Page source written to: {html_file}")
                 # print(upload_button)
                 browser.quit()
                 return False
@@ -212,5 +215,5 @@ class XhsUploader(Upload):
             return False
 
         except Exception as e:
-            print(f"An error occurred during the upload: {e}")
+            self.logger.error(f"An error occurred during the upload: {e}")
             return False

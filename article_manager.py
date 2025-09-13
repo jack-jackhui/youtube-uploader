@@ -1,6 +1,8 @@
 # article_manager.py
 
 import re
+import time
+import requests
 import feedparser
 from datetime import datetime, timedelta
 from newspaper import Article
@@ -43,8 +45,10 @@ def clean_text(text):
     """Remove HTML tags from the summary and return cleaned text."""
     return re.sub(r'<.*?>', '', text)
 
+""" old code for get_full_text function
 def get_full_text(url):
-    """Retrieve the full text of an article from its URL using newspaper3k."""
+    # Retrieve the full text of an article from its URL using newspaper3k.
+    
     try:
         article = Article(url, browser_user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36')
         article.download()
@@ -53,6 +57,28 @@ def get_full_text(url):
     except Exception as e:
         logger.warning(f"Could not retrieve full text for {url}: {e}")
         return ""
+"""
+
+def get_full_text(url):
+    """Retrieve the full text of an article from its URL using Firecrawl's /v1/scrape API."""
+    firecrawl_url = "http://192.168.1.9:3002/v1/scrape"
+    try:
+        response = requests.post(
+            firecrawl_url,
+            json={"url": url, "onlyMainContent": True, "formats": ["markdown"]},
+            timeout=60
+        )
+        response.raise_for_status()
+        data = response.json()
+        if not data.get("success"):
+            logger.warning(f"Firecrawl scrape not successful for {url}")
+            return ""
+        markdown = data.get("data", {}).get("markdown", "")
+        return markdown
+    except Exception as e:
+        logger.warning(f"Firecrawl scrape failed for {url}: {e}")
+        return ""
+
 
 def extract_domain(feed_url):
     """Extract the domain from a URL."""
@@ -213,3 +239,7 @@ def get_recent_articles(max_articles=5):
 
     logger.info(f"Total articles fetched: {len(top_articles)}")
     return top_articles
+
+if __name__ == "__main__":
+    test_url = "https://docs.firecrawl.dev"
+    print(get_full_text(test_url))
