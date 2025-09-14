@@ -2,11 +2,10 @@
 import platform
 import shutil
 import os
-import signal
-import subprocess
 from DrissionPage import ChromiumOptions
 import psutil
 # import tempfile
+
 
 def kill_chromium_processes():
     """
@@ -26,27 +25,6 @@ def kill_chromium_processes():
                 pass
     except Exception as e:
         print(f"Error stopping Chromium/Chrome processes: {e}")
-
-
-def check_chromium_running():
-    """
-    Checks if any Chromium or Chrome processes are running.
-    Returns True if they are running, otherwise False.
-    """
-    try:
-        # Define process names to look for
-        process_names = ['chromium', 'chrome', 'chromedriver', 'chrome.exe', 'chromium.exe']
-        running = False
-
-        for proc in psutil.process_iter(['name']):
-            if proc.info['name'].lower() in process_names:
-                print(f"Chromium/Chrome is running with PID: {proc.pid}")
-                running = True
-
-        return running
-    except Exception as e:
-        print(f"Error checking Chromium/Chrome processes: {e}")
-        return True  # Assume something is running if there's an error
 
 
 def check_chromium_running():
@@ -124,9 +102,16 @@ def get_chromium_path():
 
     else:
         raise Exception(f"Unsupported operating system: {system_name}")
-def get_chromium_options(headless=False, user_data_dir=None):
+
+
+def get_chromium_options(headless: bool = False, user_data_dir: str | None = None, *, incognito: bool = False, clear_storage: bool = False):
     """
     Configures ChromiumOptions with dynamic path detection for Chromium/Chrome.
+    Parameters:
+    - headless: run in headless mode
+    - user_data_dir: persistent profile directory
+    - incognito: use incognito window (disables persistent profile)
+    - clear_storage: clear browser storage on startup
     """
     chromium_path = get_chromium_path()
     if not chromium_path:
@@ -145,7 +130,10 @@ def get_chromium_options(headless=False, user_data_dir=None):
         co.headless()  # Enable headless mode if specified
         co.set_argument('--headless=new')
     co.new_env()
-    co.incognito()  # Set browser to incognito mode
+
+    if incognito:
+        co.incognito()
+
     co.set_argument('--no-first-run')
     co.auto_port(True)  # Automatically assign a free port
     # co.set_argument(f'--user-data-dir={temp_dir}')
@@ -161,16 +149,19 @@ def get_chromium_options(headless=False, user_data_dir=None):
     co.set_argument('--no-sandbox')
     co.set_argument('--disable-dev-shm-usage')
     co.set_argument('--disable-setuid-sandbox')
-    co.set_argument('--disable-cache')  # Disables the cache
-    co.set_argument('--disk-cache-size=0')  # Set cache size to zero
-    co.set_argument('--media-cache-size=0')  # Disable media cache
-    co.set_argument('--disable-application-cache')  # Disable the application cache
-    co.set_argument('--aggressive-cache-discard')
-    co.set_argument('--disable-site-isolation-trials')  # Disable site isolation for cache clearing
+
+    if clear_storage:
+        # Clear browser storage (cookies, local storage, etc.) only if explicitly requested
+        co.set_argument('--clear-storage')
+        co.set_argument('--disable-cache')  # Disables the cache
+        co.set_argument('--disk-cache-size=0')  # Set cache size to zero
+        co.set_argument('--media-cache-size=0')  # Disable media cache
+        co.set_argument('--disable-application-cache')  # Disable the application cache
+        co.set_argument('--aggressive-cache-discard')
+        co.set_argument('--disable-site-isolation-trials')  # Disable site isolation for cache clearing
+
     # co.set_argument('--disable-web-security')  # Disable web security (for testing purposes)
     co.set_argument('--window-size=1920,1080')
     # co.set_argument('--guest')
-    # Clear browser storage (cookies, local storage, etc.)
-    co.set_argument('--clear-storage')  # Optional argument to clear storage on every run
 
     return co

@@ -27,3 +27,7 @@ platforms/douyin/__pycache__/
 platforms/toutiao/__pycache__/
 platforms/xhs/__pycache__/
 .tranco/
+CLAUDE.md
+.claude/
+claudedocs
+.serena

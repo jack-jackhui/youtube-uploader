@@ -9,6 +9,7 @@ from utils.util_sqlite import excute_sqlite_sql
 from datetime import datetime
 import os
 from utils.chromium_utils import get_chromium_options, check_chromium_running, kill_chromium_processes
+from utils.cookie_manager import XhsCookieManager
 
 
 class XhsUploader(Upload):
@@ -32,24 +33,46 @@ class XhsUploader(Upload):
             # Get the ChromiumOptions dynamically
             co = get_chromium_options(headless=headless)
 
+            # Initialize enhanced cookie manager
+            cookie_manager = XhsCookieManager(logger=self.logger)
+            
+            # Check if cookies exist and are valid
+            cookies = cookie_manager.load_cookies()
+            if not cookies:
+                self.logger.info(f"{self.platform}: No cookies found, manual login required")
+                if not cookie_manager.renew_cookies_with_manual_login(headless=headless):
+                    self.logger.error(f"{self.platform}: Failed to obtain cookies")
+                    return False
+                cookies = cookie_manager.load_cookies()
+            
             # Initialize Chromium browser
             self.logger.info(f"{self.platform}: Logging in")
-
             browser = Chromium(co)
-
-            # Load cookies from saved file and apply them to the session
-            with open(config.xhs_config["cookie_path"], 'r') as file:
-                storage_state = json.load(file)
-                cookies = storage_state.get('cookies', [])
-
             tab = browser.latest_tab
-
-            # Navigate to a page within the domain of the cookies to set them
-            # tab.get('https://www.xiaohongshu.com')
-
-            # Setting cookies using tab.set.cookies()
+            
+            # Set cookies
             tab.set.cookies(cookies)
             self.logger.info(f"{self.platform}: Cookies set successfully")
+            
+            # Validate cookies by testing access to upload page
+            if not cookie_manager.are_cookies_valid(tab):
+                cookie_age = cookie_manager.get_cookie_age()
+                self.logger.warning(f"{self.platform}: Cookies invalid (age: {cookie_age:.1f}h), renewing...")
+                
+                browser.quit()  # Close current browser before opening renewal browser
+                
+                if cookie_manager.renew_cookies_with_manual_login(headless=headless):
+                    self.logger.info(f"{self.platform}: Cookies renewed successfully, retrying upload")
+                    cookies = cookie_manager.load_cookies()
+                    
+                    # Restart with new cookies
+                    browser = Chromium(co)
+                    tab = browser.latest_tab
+                    tab.set.cookies(cookies)
+                    self.logger.info(f"{self.platform}: New cookies set successfully")
+                else:
+                    self.logger.error(f"{self.platform}: Failed to renew cookies")
+                    return False
 
             # Now navigate to the upload page
             tab.get(config.xhs_config["up_site"])
@@ -57,7 +80,7 @@ class XhsUploader(Upload):
             tab.wait.load_start()  # Wait for the page to fully load
 
             # Wait for the file input to be displayed
-            input_displayed=tab.wait.ele_displayed('tag:input')
+            input_displayed = tab.wait.ele_displayed('tag:input')
             # print(input_displayed)
 
             # Find upload button with retry logic
@@ -71,10 +94,11 @@ class XhsUploader(Upload):
                     self.logger.info(f"{self.platform}: Upload button found on attempt {retry_count + 1}")
                     break
                 else:
-                    self.logger.warning(f"{self.platform}: Upload button not found on attempt {retry_count + 1}. Retrying in 1 second...")
+                    self.logger.warning(
+                        f"{self.platform}: Upload button not found on attempt {retry_count + 1}. Retrying in 1 second...")
                     tab.wait(1)  # Wait 1 second before retrying
                     retry_count += 1
-            
+
             # Ensure the upload button is found
             if not upload_button:
                 self.logger.error(f"{self.platform}: Failed to find the upload button for video upload.")
@@ -82,7 +106,7 @@ class XhsUploader(Upload):
                 html_file = os.path.join('tmp', 'xhs_page_source.html')
                 with open(html_file, 'w', encoding='utf-8') as f:
                     f.write(tab.html)
-                self.logger.error(f"Page source written to: {html_file}")                
+                self.logger.error(f"Page source written to: {html_file}")
                 # print(upload_button)
                 browser.quit()
                 return False
@@ -106,7 +130,7 @@ class XhsUploader(Upload):
             # if cover_image:
             #    self.logger.info(f"{self.platform}: Video cover image successfully loaded")
             # else:
-                # tab.get_screenshot(path='tmp', name='screenshot_2.jpg', full_page=True)
+            # tab.get_screenshot(path='tmp', name='screenshot_2.jpg', full_page=True)
             #    self.logger.error(f"{self.platform}: Failed to load video cover image in time")
             #    browser.quit()
             #    return False  # Exit if cover image is not found
