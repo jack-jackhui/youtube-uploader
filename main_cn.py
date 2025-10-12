@@ -3,7 +3,7 @@ from platforms.bili.uploader import BiliUploader
 from platforms.douyin.uploader import DouyinUploader
 from platforms.toutiao.uploader import ToutiaoUploader
 from platforms.xhs.uploader import XhsUploader
-from platforms.xhs.uploader_mcp import XhsMcpUploader
+from platforms.xhs.uploader_mcp_final import XhsMcpUploader
 from utils.util_sqlite import check
 
 # Define a dictionary that maps platform names to their respective uploader classes
@@ -21,6 +21,8 @@ async def main(platform_name, video_url, video_path, video_name, cover_path, des
         platform_name = 'xhs_mcp'
         # Use MCP uploader for XHS
         try:
+            print(f"[MCP] Initializing MCP uploader for XHS")
+            print(f"[MCP] Video path being used: {video_path}")
             uploader_class = XhsMcpUploader()
         except ValueError as e:
             print(f"MCP Error: {e}")

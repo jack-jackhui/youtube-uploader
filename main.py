@@ -102,8 +102,19 @@ def main():
                 # Upload to Chinese platforms
                 # Download the original video for uploading to Chinese platforms
                 print(f"Downloading original video for Chinese platforms upload: {original_video_url}")
+
+                # Use absolute path for video downloads, especially for MCP uploads
+                video_download_path = os.path.abspath("downloaded_videos")
                 original_video_path = video_api_call.download_video(original_video_url, video_subject,
-                                                                    save_path="downloaded_videos")
+                                                                    save_path=video_download_path)
+
+                # Ensure we have an absolute path for MCP server
+                if original_video_path:
+                    original_video_path = os.path.abspath(original_video_path)
+                    print(f"Video downloaded to absolute path: {original_video_path}")
+                else:
+                    print("Failed to download video.")
+                    return
 
                 # Call the Chinese uploader
                 asyncio.run(upload_to_chinese_platforms(original_video_path, video_subject, video_subject, tags))
