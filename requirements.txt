@@ -1,6 +1,6 @@
 aiosqlite==0.20.0
 annotated-types==0.6.0
-anyio==4.3.0
+anyio>=4.5.0
 asyncio==3.4.3
 cachetools==5.3.3
 certifi==2024.8.30
