@@ -38,9 +38,9 @@ toutiao_config = {
     "check_site": "https://mp.toutiao.com/profile_v4/xigua/content-manage-v2"
 }
 xhs_config = {
-    "cookie_path": os.path.join(cookie_dir,"xhs_cookies3.json"),
+    "cookie_path": os.path.join(cookie_dir,"cookies_xhs.json"),
     "cookie_save_path": os.path.join(cookie_dir,"xhs_save_cookies.json"),
-    "up_site": "https://creator.xiaohongshu.com/publish/publish?source=official",
+    "up_site": "https://creator.xiaohongshu.com/publish/publish?source=official&from=menu&target=video",
     "check_site": "https://creator.xiaohongshu.com/publish/success?source&bind_status=not_bind&__debugger__=",
     "dashboard_url": "https://creator.xiaohongshu.com/new/home"
 

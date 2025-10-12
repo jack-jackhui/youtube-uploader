@@ -161,9 +161,20 @@ class XhsCookieManager:
                 
             with open(self.cookie_path, 'r', encoding='utf-8') as f:
                 storage_state = json.load(f)
-                
-            return storage_state.get('cookies', [])
-            
+
+            # Handle both formats:
+            # 1. {"cookies": [...], "timestamp": ...} (new format)
+            # 2. [...] (raw cookie list)
+            if isinstance(storage_state, dict):
+                return storage_state.get('cookies', [])
+            elif isinstance(storage_state, list):
+                # Direct list of cookies
+                return storage_state
+            else:
+                if self.logger:
+                    self.logger.error(f"Unexpected cookie file format: {type(storage_state)}")
+                return None
+
         except Exception as e:
             if self.logger:
                 self.logger.error(f"Failed to load cookies: {e}")
@@ -177,13 +188,14 @@ class XhsCookieManager:
                 
             with open(self.cookie_path, 'r', encoding='utf-8') as f:
                 storage_state = json.load(f)
-                
-            if 'timestamp' in storage_state:
+
+            # Handle dictionary format with timestamp
+            if isinstance(storage_state, dict) and 'timestamp' in storage_state:
                 cookie_time = datetime.fromisoformat(storage_state['timestamp'])
                 age = datetime.now() - cookie_time
                 return age.total_seconds() / 3600  # Return hours
             
-            # If no timestamp, check file modification time
+            # If no timestamp or list format, check file modification time
             file_time = datetime.fromtimestamp(os.path.getmtime(self.cookie_path))
             age = datetime.now() - file_time
             return age.total_seconds() / 3600

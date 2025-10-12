@@ -11,7 +11,7 @@ from video_manager import generate_video_subject, process_video_subject, generat
 # import json
 from dotenv import load_dotenv
 import os
-import test_youtube
+# import test_youtube
 from email_notifier import send_email
 from instagram_publisher import publish_video_to_instagram
 from main_cn import main as chinese_uploader_main
@@ -131,6 +131,9 @@ async def upload_to_chinese_platforms(video_path, video_subject, video_script, t
             topics = tags
             headless = True  # Set to True if you prefer headless mode
 
+            # Check if MCP should be used for XHS uploads
+            use_mcp = platform_name == 'xhs' and os.getenv('XHS_MCP_ENABLED', 'false').lower() == 'true'
+            
             # Call the asynchronous function
             upload_success = await chinese_uploader_main(
                 platform_name=platform_name,
@@ -140,7 +143,8 @@ async def upload_to_chinese_platforms(video_path, video_subject, video_script, t
                 cover_path=cover_path,
                 description=description,
                 topics=topics,
-                headless=headless
+                headless=headless,
+                use_mcp=use_mcp
             )
             if upload_success:
                 print(f"Video uploaded successfully to {platform_name}.")

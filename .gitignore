@@ -31,3 +31,10 @@ CLAUDE.md
 .claude/
 claudedocs
 .serena
+
+# MCP development/testing files
+check_mcp_server.py
+restart_mcp_server.sh
+*_mcp_v*.py
+uploader_rest.py
+mcp_session_reset.py
