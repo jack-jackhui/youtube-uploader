@@ -182,7 +182,7 @@ class XhsMcpUploader(Upload):
             try:
                 result = await asyncio.wait_for(
                     self.session.call_tool("publish_with_video", arguments=arguments),
-                    timeout=900.0  # 5 minutes timeout for video upload
+                    timeout=900.0  # 15 minutes timeout for video upload
                 )
             except asyncio.TimeoutError:
                 self.logger.error("Upload timed out after 15 minutes")

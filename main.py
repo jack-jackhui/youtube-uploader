@@ -100,24 +100,31 @@ def main():
                     print("Instagram upload skipped as per configuration.")
             elif language == 'zh':
                 # Upload to Chinese platforms
-                # Download the original video for uploading to Chinese platforms
                 print(f"Downloading original video for Chinese platforms upload: {original_video_url}")
 
-                # Use absolute path for video downloads, especially for MCP uploads
+                # Use absolute path for video downloads
                 video_download_path = os.path.abspath("downloaded_videos")
-                original_video_path = video_api_call.download_video(original_video_url, video_subject,
-                                                                    save_path=video_download_path)
+                original_video_path = video_api_call.download_video(
+                    original_video_url,
+                    video_subject,
+                    save_path=video_download_path
+                )
 
-                # Ensure we have an absolute path for MCP server
-                if original_video_path:
-                    original_video_path = os.path.abspath(original_video_path)
-                    print(f"Video downloaded to absolute path: {original_video_path}")
-                else:
+                if not original_video_path:
                     print("Failed to download video.")
                     return
 
+                # Ensure we have an absolute path for MCP server
+                original_video_path = os.path.abspath(original_video_path)
+                print(f"Video downloaded to absolute path: {original_video_path}")
+
                 # Call the Chinese uploader
-                asyncio.run(upload_to_chinese_platforms(original_video_path, video_subject, video_subject, tags))
+                asyncio.run(upload_to_chinese_platforms(
+                    original_video_path,
+                    video_subject,
+                    video_subject,
+                    tags
+                ))
             else:
                 print(f"Unsupported language: {language}")
         else:
@@ -140,7 +147,8 @@ async def upload_to_chinese_platforms(video_path, video_subject, video_script, t
             cover_path = None  # Provide cover image path if available
             description = video_script
             topics = tags
-            headless = True  # Set to True if you prefer headless mode
+            # Read headless from env to allow MCP browser visibility when debugging
+            headless = os.getenv('HEADLESS', 'true').lower() == 'true'
 
             # Check if MCP should be used for XHS uploads
             use_mcp = platform_name == 'xhs' and os.getenv('XHS_MCP_ENABLED', 'false').lower() == 'true'
