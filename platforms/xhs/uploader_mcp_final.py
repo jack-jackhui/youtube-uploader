@@ -6,6 +6,7 @@ This is the correct way to connect to xiaohongshu-mcp server (same as Claude Des
 import json
 import os
 import asyncio
+import re
 from datetime import datetime
 from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
@@ -146,12 +147,64 @@ class XhsMcpUploader(Upload):
             self.logger.error(f"Failed to check login status: {e}")
             return False
 
+    def _build_tags(self, topics):
+        """Build Chinese-only tags for XHS.
+        - Keep at most 2 user-provided tags containing Chinese characters and no Latin letters
+        - Append predefined Chinese keywords from config
+        - Deduplicate while preserving order
+        - Cap the total number of tags (default 10, configurable via XHS_MAX_TAGS)
+        """
+        max_tags = int(os.getenv("XHS_MAX_TAGS", "10"))
+
+        def is_chinese_only(s: str) -> bool:
+            if not isinstance(s, str):
+                return False
+            t = s.strip()
+            if not t:
+                return False
+            # has CJK
+            has_cjk = re.search(r"[\u3400-\u9fff\uf900-\ufaff]", t) is not None
+            # reject if contains Latin letters
+            has_latin = re.search(r"[A-Za-z]", t) is not None
+            return has_cjk and not has_latin
+
+        user_cn = []
+        seen = set()
+        # take up to 2 chinese-only from input topics
+        for tag in (topics or []):
+            if len(user_cn) >= 2:
+                break
+            if not isinstance(tag, str):
+                continue
+            candidate = tag.strip()
+            if not candidate:
+                continue
+            if is_chinese_only(candidate) and candidate not in seen:
+                user_cn.append(candidate)
+                seen.add(candidate)
+
+        # append predefined chinese keywords
+        predefined = []
+        for k in getattr(config, 'keywords', []) or []:
+            if isinstance(k, str):
+                kk = k.strip()
+                if kk and is_chinese_only(kk) and kk not in seen:
+                    predefined.append(kk)
+                    seen.add(kk)
+
+        final = user_cn + predefined
+        # cap
+        if len(final) > max_tags:
+            final = final[:max_tags]
+        return final
+
     async def upload_video(self, video_url, video_path, video_name, cover_path=None,
                           description=None, topics=None, collection=None, headless=False):
         """Upload video to Xiaohongshu via MCP"""
         if topics is None:
             topics = []
-        topics = topics + config.keywords
+        # Build Chinese-only tags per XHS rules
+        tags = self._build_tags(topics)
 
         try:
             await self._ensure_session()
@@ -167,13 +220,14 @@ class XhsMcpUploader(Upload):
             # DON'T convert to absolute path - the video is on the remote MCP server
             # The path should be used as-is (Windows path for Windows server)
             self.logger.info(f"Using video path: {video_path}")
+            self.logger.info(f"Using tags (Chinese-only, max 10): {tags}")
 
             # Prepare arguments for publish_with_video tool
             arguments = {
                 "title": video_name[:20],  # XHS 20 char limit
                 "content": description or "",
                 "video": video_path,  # Use path as-is for remote server
-                "tags": topics
+                "tags": tags
             }
 
             self.logger.info(f"Publishing video: {video_path}")
