@@ -95,7 +95,7 @@ def get_readability_score(text):
         logger.warning(f"Could not compute readability score: {e}")
         return 5  # Default to average score
 
-def get_recent_articles(max_articles=5):
+def get_recent_articles(max_articles=5, language='en'):
     """Fetch recent articles from RSS feeds and select the highest value articles."""
     all_articles = []
     now = datetime.now()
@@ -130,8 +130,8 @@ def get_recent_articles(max_articles=5):
     if latest_list is None:
         initialize_tranco_list()
 
-    # Load RSS feeds from the configuration
-    rss_feeds = load_rss_feeds()
+    # Load RSS feeds from the configuration based on language
+    rss_feeds = load_rss_feeds(language=language)
 
     seen_links = set()
 

@@ -109,13 +109,42 @@ class XhsMcpUploader(Upload):
         self.session_context = None
         self.client_context = None
 
+    async def _call_tool_with_timeout(self, tool_name: str, arguments: dict, timeout: float = 180.0):
+        """
+        Call MCP tool with extended timeout for slow browser operations on Windows scheduled runs.
+
+        Args:
+            tool_name: Name of the MCP tool to call
+            arguments: Tool arguments
+            timeout: Timeout in seconds (default 180s for cold-start, 900s for uploads)
+
+        Returns:
+            Tool result or None if timeout occurs
+        """
+        try:
+            return await asyncio.wait_for(
+                self.session.call_tool(tool_name, arguments=arguments),
+                timeout=timeout
+            )
+        except asyncio.TimeoutError:
+            self.logger.warning(
+                f"⚠️  MCP call '{tool_name}' timed out after {timeout}s - "
+                f"this may indicate slow browser initialization on Windows scheduled runs. "
+                f"Consider increasing timeout if this persists."
+            )
+            raise
+
     async def check_login_status(self):
         """Check Xiaohongshu login status"""
         try:
             await self._ensure_session()
 
-            # Call the tool using MCP SDK
-            result = await self.session.call_tool("check_login_status", arguments={})
+            # Call the tool using MCP SDK with timeout for cold-start browser operations
+            result = await self._call_tool_with_timeout(
+                "check_login_status",
+                arguments={},
+                timeout=180.0  # 3 minutes for login check (includes cold-start browser init)
+            )
 
             # Parse response
             if result.content:
@@ -232,15 +261,12 @@ class XhsMcpUploader(Upload):
 
             self.logger.info(f"Publishing video: {video_path}")
 
-            # Call the tool using MCP SDK with longer timeout
-            try:
-                result = await asyncio.wait_for(
-                    self.session.call_tool("publish_with_video", arguments=arguments),
-                    timeout=900.0  # 15 minutes timeout for video upload
-                )
-            except asyncio.TimeoutError:
-                self.logger.error("Upload timed out after 15 minutes")
-                return False
+            # Call the tool using MCP SDK with extended timeout for video upload
+            result = await self._call_tool_with_timeout(
+                "publish_with_video",
+                arguments=arguments,
+                timeout=900.0  # 15 minutes timeout for video upload (includes browser processing)
+            )
 
             # Parse response
             if result.content:

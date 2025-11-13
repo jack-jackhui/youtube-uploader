@@ -22,7 +22,7 @@ def generate_video_subject(api_key, language='en', articles=None):
     """Generate a video subject based on recent articles or a predefined prompt."""
     # Fetch the latest articles
     if articles is None:
-        news_articles = get_recent_articles()
+        news_articles = get_recent_articles(language=language)
 
     if articles:
         # Generate video subject based on the fetched articles
