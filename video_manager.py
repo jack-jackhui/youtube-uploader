@@ -45,44 +45,73 @@ def generate_video_subject_from_articles(api_key, articles, language='en'):
     # Define the prompt
     if language == 'en':
         predefined_prompt = f"""
-As a social media influencer, create a single creative and engaging one-line video subject for a tech-themed YouTube channel that synthesizes insights from the following news articles:
+As a tech-focused content creator, analyze these recent news articles and identify the dominant trend or theme connecting them:
 
 {news_content}
 
-Your video subject should capture an overarching theme, trend, or insightful perspective that connects these articles, providing a fresh take that goes beyond any single article.
+Based on your analysis:
+1. First, identify the key trend, technology, or development that appears across multiple articles
+2. Then, create a compelling question-style video title that captures this trend
 
-Ensure the video subject focuses on one of the following topics: AI, DeFi, ChatGPT, blockchain, Bitcoin, Ethereum, Web 3.0, Solana, or Algorand.
+Requirements:
+- The title MUST be a thought-provoking question that makes viewers curious
+- Focus on the underlying TREND, not specific product names (unless it's genuinely the biggest story)
+- Synthesize insights across articles rather than focusing on just one
+- Keep within tech/AI/innovation space but don't force-fit unrelated topics
+- Do NOT include any political content or government-related topics
+- Maximum 100 characters
 
-Do not include more than one topic in a single video subject. Limit the number of characters to 100 or less.
+Examples of good trend-based question titles:
+- "Is AI about to replace your favorite app?"
+- "Why are tech giants suddenly betting on robots?"
+- "Are we entering the age of AI agents?"
+
+Return ONLY the video title question, nothing else.
 """
     else:
         predefined_prompt = f"""
-作为一名社交媒体网红博主，基于以下新闻文章，为科技主题的小红书频道生成一个有创意且吸引人的一句话视频主题：
+作为科技领域的内容创作者，分析以下新闻文章并识别它们之间的主要趋势或主题：
 
 {news_content}
-你的视频主题应捕捉这些文章所传达的整体主题、趋势或深刻见解，提供超越单篇文章的新鲜视角。
-确保视频主题专注于最新的科技发展。不要在单个视频主题中包含多个主题。限制字符数不超过25个字。
+
+基于你的分析：
+1. 首先，识别多篇文章中出现的关键趋势、技术或发展
+2. 然后，创建一个引人入胜的问题式视频标题来捕捉这一趋势
+
+要求：
+- 标题必须是一个引发好奇心的问题
+- 关注潜在趋势，而非具体产品名称（除非它确实是最大的热点）
+- 综合多篇文章的见解，而不仅仅关注一篇
+- 保持在科技/AI/创新领域，但不要强行关联无关主题
+- 不要包含任何政治内容或政府相关话题
+- 最多25个字符
+
+只返回视频标题问题，不要其他内容。
 """
 
     # Generate video subject using OpenAI
     return openai_chatgpt.generate_video_subject(api_key, predefined_prompt)
 
 def generate_video_subject_from_prompt(api_key, language='en'):
-    """Generate a video subject using a predefined prompt."""
+    """Generate a video subject using a predefined prompt when no articles are available."""
     if language == 'en':
         predefined_prompt = (
-            "Act as a social media influencer, generate a single creative and engaging one-line video subject "
-            "for a tech-themed YouTube channel. Ensure the video subject focuses on one of the following topics: "
-            "AI, DeFi, ChatGPT, blockchain, Bitcoin, Ethereum, Web 3.0, Solana, or Algorand. Rotate between these topics "
-            "frequently, but do not write more than one topic in a single video subject. Limit the number of characters "
-            "to 100 or less."
+            "As a tech-focused content creator, generate a thought-provoking question-style video title "
+            "about a current trending topic in technology. Focus on broader trends like: AI assistants and agents, "
+            "robotics and automation, space technology, electric vehicles, quantum computing, AR/VR and spatial computing, "
+            "cybersecurity threats, tech industry shifts, or breakthrough scientific discoveries. "
+            "The title MUST be a compelling question that makes viewers curious. "
+            "Do NOT include any political content or government-related topics. "
+            "Limit the number of characters to 100 or less. Return ONLY the question title."
         )
     else:
         predefined_prompt = (
-            "作为一名非常成功的社交媒体网红博主，为以科技主题的小红书频道生成一个有创意且吸引人的一句话视频主题，"
-            "确保视频主题专注于以下主题之一：人工智能（AI）、去中心化金融（DeFi）、ChatGPT、区块链、比特币、"
-            "以太坊、Solana或Algorand。经常在这些主题之间轮换，但不要在单个视频主题中包含多个主题。"
-            "限制字符数不超过25个字。"
+            "作为科技领域的内容创作者，生成一个关于当前科技热门话题的问题式视频标题。"
+            "关注更广泛的趋势，如：AI助手和智能体、机器人与自动化、太空科技、电动汽车、量子计算、"
+            "AR/VR和空间计算、网络安全、科技行业变化或突破性科学发现。"
+            "标题必须是一个引发好奇心的问题。"
+            "不要包含任何政治内容或政府相关话题。"
+            "限制字符数不超过25个字。只返回问题标题。"
         )
     return openai_chatgpt.generate_video_subject(api_key, predefined_prompt)
 
