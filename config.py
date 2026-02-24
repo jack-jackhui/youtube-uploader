@@ -11,31 +11,42 @@ def load_rss_feeds(language='en'):
         list: RSS feed URLs for the specified language
     """
 
-    # English RSS feeds
+    # English RSS feeds - Diverse tech categories
     english_feeds = [
-        # BestBlogs.dev - English feeds (last 3 days, high quality)
-        'https://www.bestblogs.dev/en/feeds/rss?category=ai&timeFilter=3d&minScore=85',
-        'https://www.bestblogs.dev/en/feeds/rss?category=product&timeFilter=3d&minScore=85',
-
-        # Existing English sources
-        'https://news.google.com/rss/search?q=blockchain&hl=en-US&gl=US&ceid=US:en',
-        "https://ai.googleblog.com/feeds/posts/default",
-        "https://www.microsoft.com/en-us/research/feed/",
-        "https://www.ibm.com/blogs/research/feed/",
-        "https://feeds.feedburner.com/DeepMind",
+        # AI/ML (reduced, keep best)
         "https://openai.com/blog/rss/",
-        'https://news.google.com/rss/search?q=artificial+intelligence&hl=en-US&gl=US&ceid=US:en',
-        "https://news.ycombinator.com/rss",
-        "https://rss.cnn.com/rss/edition_business.rss",
-        "https://cointelegraph.com/editors_pick_rss",
-        "https://ai-techpark.com/category/ai/feed/",
-        "https://aibusiness.com/rss.xml",
+        "https://feeds.feedburner.com/DeepMind",
         "https://venturebeat.com/category/ai/feed/",
-        "https://www.reddit.com/r/artificial",
-        "https://www.techrepublic.com/rssfeeds/topic/artificial-intelligence/",
-        "https://www.sciencedaily.com/rss/computers_math/artificial_intelligence.xml",
+
+        # Space & Aerospace
+        "https://www.spacenews.com/feed/",
+        "https://www.nasaspaceflight.com/feed/",
+        "https://www.space.com/feeds/all",
+
+        # Electric Vehicles & Auto
+        "https://electrek.co/feed/",
+        "https://insideevs.com/rss/news/",
+
+        # Semiconductors & Hardware
+        "https://www.anandtech.com/rss/",
+        "https://www.tomshardware.com/feeds/all",
+
+        # Cybersecurity
+        "https://krebsonsecurity.com/feed/",
+        "https://www.bleepingcomputer.com/feed/",
+
+        # Robotics
+        "https://www.therobotreport.com/feed/",
+
+        # Quantum Computing
+        "https://quantumcomputingreport.com/feed/",
+
+        # General Tech (broad coverage)
+        "https://news.ycombinator.com/rss",
+        "https://www.theverge.com/rss/index.xml",
+        "https://techcrunch.com/feed/",
+        "https://arstechnica.com/feed/",
         "https://feeds.bloomberg.com/technology/news.rss",
-        "https://deepmind.com/blog/feed/basic/",
     ]
 
     # Chinese RSS feeds

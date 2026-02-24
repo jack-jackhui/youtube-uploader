@@ -95,36 +95,69 @@ def get_readability_score(text):
         logger.warning(f"Could not compute readability score: {e}")
         return 5  # Default to average score
 
+def normalize_title(title):
+    """Normalize a title for comparison (lowercase, remove punctuation, etc.)."""
+    import re
+    # Remove punctuation and extra whitespace, lowercase
+    normalized = re.sub(r'[^\w\s]', '', title.lower())
+    normalized = ' '.join(normalized.split())
+    return normalized
+
+
 def get_recent_articles(max_articles=5, language='en'):
     """Fetch recent articles from RSS feeds and select the highest value articles."""
     all_articles = []
     now = datetime.now()
-    cutoff_date = now - timedelta(days=1)  # Get articles from the last day
+    cutoff_date = now - timedelta(hours=48)  # Extended from 24h to 48h
 
-    # Define AI and crypto keywords
-    ai_keywords = [
-        "AI", "Artificial Intelligence", "Machine Learning", "Deep Learning", "Neural Network",
-        "Natural Language Processing", "NLP", "Computer Vision", "Robotics", "ChatGPT",
-        "GPT-3", "GPT-4", "Reinforcement Learning", "Generative Adversarial Networks", "GAN",
-        "Transformer", "BERT", "OpenAI", "TensorFlow", "PyTorch", "Cognitive Computing",
-        "Data Science", "Algorithm", "Predictive Analytics", "Big Data", "Automation"
-    ]
+    # Balanced keyword categories with equal weights
+    keyword_categories = {
+        'ai': {
+            'weight': 3,
+            'keywords': ["AI", "Artificial Intelligence", "Machine Learning", "Deep Learning",
+                         "ChatGPT", "GPT", "LLM", "Large Language Model", "Generative AI",
+                         "OpenAI", "Anthropic", "Claude", "Gemini"]
+        },
+        'space': {
+            'weight': 3,
+            'keywords': ["SpaceX", "NASA", "Starship", "Satellite", "Space Station",
+                         "Mars", "Moon", "Rocket", "Blue Origin", "Starlink"]
+        },
+        'ev': {
+            'weight': 3,
+            'keywords': ["Tesla", "Electric Vehicle", "EV", "Battery", "Autonomous",
+                         "Self-Driving", "Rivian", "BYD", "Waymo", "Robotaxi"]
+        },
+        'semiconductor': {
+            'weight': 3,
+            'keywords': ["Nvidia", "AMD", "Intel", "TSMC", "Chip", "Semiconductor",
+                         "GPU", "CPU", "Processor"]
+        },
+        'cybersecurity': {
+            'weight': 3,
+            'keywords': ["Hack", "Breach", "Ransomware", "Cybersecurity", "Vulnerability",
+                         "Zero-Day", "Malware"]
+        },
+        'robotics': {
+            'weight': 3,
+            'keywords': ["Robot", "Robotics", "Humanoid", "Boston Dynamics", "Figure",
+                         "Optimus"]
+        },
+        'quantum': {
+            'weight': 2,
+            'keywords': ["Quantum", "Qubit", "Quantum Computing"]
+        },
+        'crypto': {
+            'weight': 1,
+            'keywords': ["Blockchain", "Bitcoin", "Ethereum", "Cryptocurrency"]
+        }
+    }
 
-    crypto_keywords = [
-        "Blockchain", "Bitcoin", "Ethereum", "Cryptocurrency", "DeFi", "Web 3.0",
-        "Solana", "Algorand", "NFT", "Smart Contract", "Crypto"
-    ]
-
-    # Create a dictionary with keyword weights
+    # Flatten keywords with weights
     keywords_with_weights = {}
-
-    # Assign weight 3 to AI keywords
-    for kw in ai_keywords:
-        keywords_with_weights[kw.lower()] = 4
-
-    # Assign weight 1 to crypto keywords
-    for kw in crypto_keywords:
-        keywords_with_weights[kw.lower()] = 1
+    for category, data in keyword_categories.items():
+        for kw in data['keywords']:
+            keywords_with_weights[kw.lower()] = data['weight']
 
     # Initialize the Tranco list if not already done
     if latest_list is None:
@@ -135,8 +168,12 @@ def get_recent_articles(max_articles=5, language='en'):
 
     seen_links = set()
 
+    # Track normalized titles for cross-feed trending detection
+    title_to_articles = {}  # normalized_title -> list of article data
+
     for feed_url in rss_feeds:
         source_score = get_source_score(feed_url)
+        source_domain = extract_domain(feed_url)
         try:
             feed = feedparser.parse(feed_url)
             for entry in feed.entries:
@@ -181,8 +218,8 @@ def get_recent_articles(max_articles=5, language='en'):
                     WEIGHT_SOURCE = 1  # Adjusted if necessary
                     WEIGHT_READABILITY = 1
 
-                    # Calculate the total score
-                    total_score = (
+                    # Calculate the base score
+                    base_score = (
                         (title_score * WEIGHT_TITLE) +
                         (content_score * WEIGHT_CONTENT) +
                         (source_score * WEIGHT_SOURCE) +
@@ -195,15 +232,37 @@ def get_recent_articles(max_articles=5, language='en'):
                         "content": full_text,
                         "link": link,
                         "published": published_date,
-                        "score": total_score
+                        "score": base_score,
+                        "source_domain": source_domain,
+                        "cross_feed_count": 1
                     }
 
-                    # Add to the list if score is positive
-                    if total_score > 0:
-                        logger.debug(f"Article '{entry.title}' scored {total_score}")
-                        all_articles.append(article)
+                    # Track by normalized title for cross-feed detection
+                    normalized = normalize_title(entry.title)
+                    if normalized not in title_to_articles:
+                        title_to_articles[normalized] = []
+                    title_to_articles[normalized].append(article)
+
         except Exception as e:
             logger.error(f"Failed to parse feed {feed_url}: {e}")
+
+    # Apply cross-feed trending boost
+    CROSS_FEED_BOOST = 10  # Score boost per additional source
+    for normalized_title, articles in title_to_articles.items():
+        cross_feed_count = len(articles)
+        if cross_feed_count > 1:
+            logger.info(f"Cross-feed story detected ({cross_feed_count} sources): {normalized_title[:50]}...")
+            for article in articles:
+                # Boost score based on how many feeds covered this story
+                article['score'] += (cross_feed_count - 1) * CROSS_FEED_BOOST
+                article['cross_feed_count'] = cross_feed_count
+
+    # Flatten all articles from the tracking dict
+    for articles in title_to_articles.values():
+        for article in articles:
+            if article['score'] > 0:
+                logger.debug(f"Article '{article['title']}' scored {article['score']} (cross_feed: {article['cross_feed_count']})")
+                all_articles.append(article)
 
     # Sort articles by score in descending order
     sorted_articles = sorted(all_articles, key=lambda x: x['score'], reverse=True)
