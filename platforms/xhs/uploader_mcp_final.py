@@ -159,7 +159,7 @@ class XhsMcpUploader(Upload):
                             username = status_data.get("Username", "") or status_data.get("username", "")
                         except json.JSONDecodeError:
                             # Plain text response
-                            is_logged_in = "true" in text.lower() or "logged in" in text.lower()
+                            is_logged_in = "true" in text.lower() or "logged in" in text.lower() or "已登录" in text or "✅" in text
                             username = "Unknown"
 
                         if is_logged_in:

@@ -11,6 +11,7 @@ from video_manager import generate_video_subject, process_video_subject, generat
 # import json
 from dotenv import load_dotenv
 import os
+from smb_path_helper import get_download_path, linux_to_windows_path, is_smb_mounted
 # import test_youtube
 from email_notifier import send_email
 from instagram_publisher import publish_video_to_instagram
@@ -103,7 +104,7 @@ def main():
                 print(f"Downloading original video for Chinese platforms upload: {original_video_url}")
 
                 # Use absolute path for video downloads
-                video_download_path = os.path.abspath("downloaded_videos")
+                video_download_path = get_download_path()  # Use SMB mount if available
                 original_video_path = video_api_call.download_video(
                     original_video_url,
                     video_subject,
@@ -115,7 +116,8 @@ def main():
                     return
 
                 # Ensure we have an absolute path for MCP server
-                original_video_path = os.path.abspath(original_video_path)
+                # Convert to Windows path if using SMB mount
+                original_video_path = linux_to_windows_path(os.path.abspath(original_video_path))
                 print(f"Video downloaded to absolute path: {original_video_path}")
 
                 # Call the Chinese uploader
