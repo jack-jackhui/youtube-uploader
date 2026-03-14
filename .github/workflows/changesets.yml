@@ -1,0 +1,53 @@
+# Changesets Release Workflow
+# Automatically creates release PRs and publishes releases
+# 
+# How it works:
+# 1. When you merge changes, run: npx changeset (or pnpm changeset)
+# 2. This creates a markdown file in .changeset/ describing the change
+# 3. When merged to main, this workflow creates a "Version Packages" PR
+# 4. Merging that PR creates the GitHub release
+
+name: Changesets
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install || npm ci
+
+      - name: Create Release Pull Request or Publish
+        uses: changesets/action@v1
+        with:
+          title: "chore: version packages"
+          commit: "chore: version packages"
+          # For Node.js projects, use: publish: pnpm release
+          # For Python, we just create the PR and tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
