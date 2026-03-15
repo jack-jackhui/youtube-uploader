@@ -3,7 +3,6 @@ annotated-types==0.6.0
 # anyio required by httpx/openai/mcp
 anyio>=4.6.0,<5
 # asyncio is part of stdlib for Python 3.8+; don't pin backport
-# asyncio==3.4.3  # removed
 cachetools==5.3.3
 certifi==2024.8.30
 charset-normalizer==3.3.2
@@ -16,17 +15,17 @@ DrissionPage==4.1.0.4
 easy-media-utils==0.1.5
 et-xmlfile==1.1.0
 exceptiongroup==1.2.1
-filelock==3.16.1
-google-api-core==2.18.0
-google-api-python-client==2.127.0
-google-auth==2.29.0
+filelock>=3.20.3
+google-api-core>=2.19.0
+google-api-python-client>=2.127.0
+google-auth>=2.29.0
 google-auth-httplib2==0.2.0
-google-auth-oauthlib==1.2.0
-googleapis-common-protos==1.63.0
+google-auth-oauthlib>=1.2.0
+googleapis-common-protos>=1.63.0
 greenlet
 gspread==6.1.0
-h11==0.14.0
-httpcore==1.0.5
+h11>=0.16.0
+httpcore>=1.0.9
 httplib2==0.22.0
 # httpx for openai and mcp; mcp>=1.16 requires >=0.27.1
 httpx>=0.27.1,<0.28
@@ -37,40 +36,39 @@ mcp>=1.16.0,<2.0
 numpy==2.1.1
 oauth2client==4.1.3
 oauthlib==3.2.2
-openai==1.23.3
+openai>=1.23.3
 opencv-python==4.10.0.84
 opencv-python-headless==4.10.0.84
 openpyxl==3.1.5
 pillow
 playwright==1.40.0
-proto-plus==1.23.0
-protobuf==4.25.3
+proto-plus>=1.23.0
+protobuf>=5.29.6
 psutil==6.0.0
-pyasn1==0.6.0
+pyasn1>=0.6.0
 pyasn1_modules==0.4.0
 # pydantic compatible with both openai and mcp
 pydantic>=2.10.1,<3
-# pydantic_core  # removed explicit pin; comes via pydantic wheel
 pyee==11.0.1
 pyparsing==3.1.2
 python-dotenv==1.0.1
-requests==2.31.0
+requests>=2.32.4
 requests-file==2.1.0
 requests-oauthlib==2.0.0
 rsa==4.9
-setuptools==68.2.2
+setuptools>=78.1.1
 six==1.16.0
 sniffio==1.3.1
 StrEnum==0.4.15
 tldextract==5.1.2
-tqdm==4.66.2
+tqdm>=4.66.3
 # typing_extensions compatible with pydantic>=2.10.1 (needs >=4.12.2) and openai (needs >=4.7,<5)
 typing_extensions>=4.14.1,<5
 Unidecode==1.3.8
 uritemplate==4.1.1
-urllib3==2.2.3
+urllib3>=2.6.3
 websocket-client==1.8.0
-wheel==0.41.2
+wheel>=0.46.2
 newspaper3k
 feedparser~=6.0.11
 textstat~=0.7.4
