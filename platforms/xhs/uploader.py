@@ -9,13 +9,21 @@ from utils.util_sqlite import excute_sqlite_sql
 from datetime import datetime
 import os
 from utils.chromium_utils import get_chromium_options, check_chromium_running, kill_chromium_processes
+from utils.persistent_login import XhsPersistentLogin
 
 
 class XhsUploader(Upload):
     """
-    开始上传,包括以下几个部分:
-    1.作品名称 2.作品简介 3.添加话题 4.选择合集
-    若是上传成功之后,将数据写入sqlite数据库,没成功就不写入
+    XHS (Xiaohongshu) Video Uploader using DrissionPage with persistent login.
+    
+    Features:
+    1. Pre-flight login check before upload
+    2. CDP-based cookie extraction for long-lasting sessions (months, not hours)
+    3. Automatic cookie loading and validation
+    
+    Upload steps:
+    1. Video name  2. Video description  3. Add topics  4. Select collection
+    On success, records to SQLite database.
     """
     platform = "xhs"
 
@@ -29,12 +37,35 @@ class XhsUploader(Upload):
         try:
             self.logger.info(f"Uploading video '{video_name}' to {self.platform}...")
 
+            # ============================================================
+            # PRE-FLIGHT: Check login status using persistent login module
+            # ============================================================
+            persistent_login = XhsPersistentLogin(logger=self.logger)
+            
+            # Check if cookies exist
+            cookie_info = persistent_login.get_cookie_info()
+            if not cookie_info.get('exists'):
+                self.logger.error(f"{self.platform}: No cookies found!")
+                self.logger.error(f"{self.platform}: Please run 'python xhs_login.py' to login first")
+                return False
+            
+            self.logger.info(f"{self.platform}: Found {cookie_info.get('count', 0)} cookies "
+                           f"(extraction: {cookie_info.get('extraction_method', 'unknown')})")
+            
+            # Verify cookies are still valid
+            self.logger.info(f"{self.platform}: Verifying login status...")
+            if not persistent_login.check_login_status(headless=True):
+                self.logger.error(f"{self.platform}: Cookies expired or invalid!")
+                self.logger.error(f"{self.platform}: Please run 'python xhs_login.py' to login again")
+                return False
+            
+            self.logger.info(f"{self.platform}: ✅ Login verified, proceeding with upload...")
+            # ============================================================
+
             # Get the ChromiumOptions dynamically
             co = get_chromium_options(headless=headless)
 
             # Initialize Chromium browser
-            self.logger.info(f"{self.platform}: Logging in")
-
             browser = Chromium(co)
 
             # Load cookies from saved file and apply them to the session
@@ -52,16 +83,14 @@ class XhsUploader(Upload):
 
             # Setting cookies using tab.set.cookies()
             tab.set.cookies(cookies)
-            self.logger.info(f"{self.platform}: Cookies set successfully")
+            self.logger.info(f"{self.platform}: Cookies applied ({len(cookies)} cookies)")
 
             # Now navigate to the upload page
             tab.get(config.xhs_config["up_site"])
-            # print(config.xhs_config["up_site"])
             tab.wait.load_start()  # Wait for the page to fully load
 
             # Wait for the file input to be displayed
-            input_displayed=tab.wait.ele_displayed('tag:input')
-            # print(input_displayed)
+            input_displayed = tab.wait.ele_displayed('tag:input')
 
             # Find upload button with retry logic
             max_retries = 3
@@ -81,12 +110,12 @@ class XhsUploader(Upload):
             # Ensure the upload button is found
             if not upload_button:
                 self.logger.error(f"{self.platform}: Failed to find the upload button for video upload.")
+                self.logger.error(f"{self.platform}: This likely means cookies are invalid - please run 'python xhs_login.py'")
                 tab.get_screenshot(path='tmp', name='login_failed.png', full_page=True)
                 html_file = os.path.join('tmp', 'xhs_page_source.html')
                 with open(html_file, 'w', encoding='utf-8') as f:
                     f.write(tab.html)
                 self.logger.error(f"Page source written to: {html_file}")
-                # print(upload_button)
                 browser.quit()
                 return False
 
@@ -103,17 +132,6 @@ class XhsUploader(Upload):
             # Wait for the video upload to complete
             video_upload_complete = tab.wait.ele_displayed('@text()=上传成功')
 
-            # cover_image = tab.wait.ele_displayed('tag:div@@class=coverImg', timeout=60)
-            # tab.get_screenshot(path='tmp', name='screenshot_1.jpg', full_page=True)
-            # Check if the cover image element is found
-            # if cover_image:
-            #    self.logger.info(f"{self.platform}: Video cover image successfully loaded")
-            # else:
-                # tab.get_screenshot(path='tmp', name='screenshot_2.jpg', full_page=True)
-            #    self.logger.error(f"{self.platform}: Failed to load video cover image in time")
-            #    browser.quit()
-            #    return False  # Exit if cover image is not found
-
             # Set title and description
             self.logger.info(f"{self.platform}: Setting title")
             title_input = tab.ele('tag:input@@placeholder=填写标题会有更多赞哦～')
@@ -122,7 +140,7 @@ class XhsUploader(Upload):
                 self.logger.error(f"{self.platform}: Title input not found.")
                 browser.quit()
                 return False  # Stop if title input is not found
-            # up_title = video_name + "|" + random.choice(config.key_sentence)
+            
             up_title = video_name
             title_input.input(up_title[:25])
 
@@ -207,16 +225,18 @@ class XhsUploader(Upload):
                     )
                 except Exception as e:
                     self.logger.error(f"Database error: {e}")
-                # tab.screencast.stop()
                 browser.quit()
                 return True
             else:
                 self.logger.error(f"{self.platform}: url did not change, upload may have failed")
 
-            # tab.screencast.stop()
             browser.quit()
             return False
 
+        except FileNotFoundError as e:
+            self.logger.error(f"Cookie file not found: {e}")
+            self.logger.error(f"Please run 'python xhs_login.py' to login and create cookies")
+            return False
         except Exception as e:
             self.logger.error(f"An error occurred during the upload: {e}")
             return False
