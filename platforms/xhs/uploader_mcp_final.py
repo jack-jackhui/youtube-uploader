@@ -27,6 +27,9 @@ class XhsMcpUploader(Upload):
 
         self.mcp_server_url = os.getenv('XHS_MCP_SERVER_URL', 'http://192.168.1.9:18060/mcp')
         self.mcp_enabled = os.getenv('XHS_MCP_ENABLED', 'false').lower() == 'true'
+        # MCP supports: 公开可见 / 仅自己可见 / 仅互关好友可见.
+        # Default automated MCP uploads to private.
+        self.visibility = os.getenv('XHS_MCP_VISIBILITY', '仅自己可见')
 
         if not self.mcp_enabled:
             raise ValueError("XHS MCP is not enabled. Set XHS_MCP_ENABLED=true in environment variables.")
@@ -176,6 +179,35 @@ class XhsMcpUploader(Upload):
             self.logger.error(f"Failed to check login status: {e}")
             return False
 
+    async def _warm_up_login(self, max_retries: int = 3):
+        """Warm MCP/browser by checking login with retry, matching xhs_publish.py."""
+        for attempt in range(max_retries):
+            if await self.check_login_status():
+                return True
+            if attempt < max_retries - 1:
+                wait = 5 * (attempt + 1)
+                self.logger.warning(f"MCP login warm-up failed; retrying in {wait}s ({attempt + 1}/{max_retries})")
+                await asyncio.sleep(wait)
+        return False
+
+    async def _call_publish_with_retries(self, arguments: dict, max_retries: int = 3):
+        """Publish with retry/backoff for slow Windows MCP/browser operations."""
+        for attempt in range(max_retries):
+            try:
+                self.logger.info(f"MCP publish attempt {attempt + 1}/{max_retries}")
+                return await self._call_tool_with_timeout(
+                    "publish_with_video",
+                    arguments=arguments,
+                    timeout=900.0
+                )
+            except Exception as exc:
+                if attempt < max_retries - 1:
+                    wait = 30 * (attempt + 1)
+                    self.logger.warning(f"MCP publish attempt failed: {exc}; retrying in {wait}s")
+                    await asyncio.sleep(wait)
+                else:
+                    raise
+
     def _build_tags(self, topics):
         """Build Chinese-only tags for XHS.
         - Keep at most 2 user-provided tags containing Chinese characters and no Latin letters
@@ -240,8 +272,8 @@ class XhsMcpUploader(Upload):
 
             self.logger.info(f"Uploading video '{video_name}' via MCP...")
 
-            # Check login
-            is_logged_in = await self.check_login_status()
+            # Warm up/check login before publishing (same robust pattern as xhs_publish.py).
+            is_logged_in = await self._warm_up_login()
             if not is_logged_in:
                 self.logger.error("User not logged in")
                 return False
@@ -250,23 +282,23 @@ class XhsMcpUploader(Upload):
             # The path should be used as-is (Windows path for Windows server)
             self.logger.info(f"Using video path: {video_path}")
             self.logger.info(f"Using tags (Chinese-only, max 10): {tags}")
+            self.logger.info(f"Using visibility: {self.visibility}")
 
-            # Prepare arguments for publish_with_video tool
+            # Prepare arguments for publish_with_video tool. MCP schema confirms
+            # video must be a local absolute path on the MCP server/browser
+            # machine, so we pass the SMB-converted Windows path.
             arguments = {
                 "title": video_name[:20],  # XHS 20 char limit
                 "content": description or "",
-                "video": video_path,  # Use path as-is for remote server
-                "tags": tags
+                "video": video_path,
+                "tags": tags,
+                "visibility": self.visibility
             }
 
             self.logger.info(f"Publishing video: {video_path}")
 
-            # Call the tool using MCP SDK with extended timeout for video upload
-            result = await self._call_tool_with_timeout(
-                "publish_with_video",
-                arguments=arguments,
-                timeout=900.0  # 15 minutes timeout for video upload (includes browser processing)
-            )
+            # Call the tool using robust retry/backoff for video upload.
+            result = await self._call_publish_with_retries(arguments)
 
             # Parse response
             if result.content:
