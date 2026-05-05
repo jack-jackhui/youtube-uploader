@@ -5,7 +5,10 @@ AI Video Pipeline - Generates and uploads videos to YouTube, Instagram, and Chin
 
 import asyncio
 import argparse
+import json
+import re
 import sys
+from pathlib import Path
 import video_api_call
 from youtube_manager import authenticate_youtube, upload_video
 from voice_manager import get_last_used_voice, get_random_voice, store_last_used_voice
@@ -33,12 +36,187 @@ ig_access_token = os.getenv("IG_ACCESS_TOKEN")
 print(f"[main.py] Starting up (env={env})")
 
 
+def _clean_hashtag(tag):
+    return str(tag).strip().lstrip("#")
+
+
+def _extract_markdown_section(text, heading):
+    pattern = rf"^##\s+{re.escape(heading)}\s*$"
+    match = re.search(pattern, text, flags=re.MULTILINE | re.IGNORECASE)
+    if not match:
+        return ""
+    start = match.end()
+    next_heading = re.search(r"^##\s+", text[start:], flags=re.MULTILINE)
+    end = start + next_heading.start() if next_heading else len(text)
+    return text[start:end].strip()
+
+
+def _parse_markdown_script(path):
+    text = Path(path).read_text(encoding="utf-8")
+    metadata = {"source": str(path)}
+    title = ""
+    suggested = re.search(r"^##\s+Suggested Title\s*\n+(.+?)\s*(?:\n##|\Z)", text, flags=re.MULTILINE | re.IGNORECASE | re.DOTALL)
+    if suggested:
+        title = suggested.group(1).strip().splitlines()[0].strip()
+    if not title:
+        heading = re.search(r"^#\s+(.+)$", text, flags=re.MULTILINE)
+        if heading:
+            title = re.sub(r"^Day\s+\d+\s+[—-]\s+", "", heading.group(1).strip(), flags=re.IGNORECASE)
+    if not title:
+        title = Path(path).stem.replace("-", " ").replace("_", " ").title()
+    voiceover = _extract_markdown_section(text, "Voiceover Script with Timing")
+    quoted_lines = []
+    for line in voiceover.splitlines():
+        line = line.strip()
+        if not line or line.lower().startswith("**on-screen text:"):
+            continue
+        for item in re.findall(r"\*\*(.+?)\*\*", line):
+            cleaned = item.strip().strip("“”\"'")
+            if cleaned and not cleaned.lower().startswith("on-screen text:"):
+                quoted_lines.append(cleaned)
+    script = "\n\n".join(quoted_lines) or voiceover or text
+    caption = _extract_markdown_section(text, "Caption")
+    description = _extract_markdown_section(text, "Suggested YouTube Description") or caption
+    hashtag_section = _extract_markdown_section(text, "Hashtags")
+    hashtags = re.findall(r"#[\w-]+", hashtag_section)
+    cta_match = re.search(r"\*\*CTA:\*\*\s*(.+)", text)
+    if cta_match:
+        metadata["cta"] = cta_match.group(1).strip()
+    if description:
+        metadata["description"] = description.strip()
+    if caption:
+        metadata["caption"] = caption.strip()
+    if hashtags:
+        metadata["hashtags"] = hashtags
+    return {"topic": title, "script": script.strip(), "hashtags": hashtags, "metadata": metadata}
+
+
+def _parse_json_script(path):
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    topic = data.get("topic") or data.get("title") or data.get("video_subject")
+    script = data.get("script") or data.get("video_script") or data.get("body") or data.get("voiceover")
+    hashtags = data.get("hashtags") or data.get("tags") or []
+    if isinstance(hashtags, str):
+        hashtags = re.findall(r"#[\w-]+", hashtags) or [h.strip() for h in hashtags.split(",") if h.strip()]
+    metadata = {k: v for k, v in data.items() if k not in ("script", "video_script", "body", "voiceover")}
+    return {"topic": topic, "script": script, "hashtags": hashtags, "metadata": metadata}
+
+
+def load_script_file(path):
+    suffix = Path(path).suffix.lower()
+    if suffix == ".json":
+        return _parse_json_script(path)
+    if suffix in (".md", ".markdown", ".txt"):
+        return _parse_markdown_script(path)
+    raise ValueError(f"Unsupported script file type: {suffix or 'unknown'}")
+
+
+def _compose_backlog_script(entry):
+    for key in ("script", "video_script", "full_script", "body", "voiceover"):
+        value = entry.get(key)
+        if value:
+            return str(value).strip()
+    parts = []
+    if entry.get("hook"):
+        parts.append(str(entry["hook"]).strip())
+    if entry.get("script_outline"):
+        outline = re.sub(r";\s*", "\n", str(entry["script_outline"]).strip())
+        parts.append(outline)
+    if entry.get("cta"):
+        parts.append(str(entry["cta"]).strip())
+    return "\n\n".join(part for part in parts if part)
+
+
+def load_backlog_entry(path, day):
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    if isinstance(data, dict):
+        videos = data.get("videos") or data.get("days") or data.get("entries") or []
+        campaign_meta = {k: v for k, v in data.items() if k not in ("videos", "days", "entries")}
+    else:
+        videos = data
+        campaign_meta = {}
+    entry = None
+    for candidate in videos:
+        if int(candidate.get("day", -1)) == int(day):
+            entry = candidate
+            break
+    if not entry:
+        raise ValueError(f"No backlog entry found for day {day} in {path}")
+    hashtags = entry.get("hashtags") or entry.get("tags") or []
+    if isinstance(hashtags, str):
+        hashtags = re.findall(r"#[\w-]+", hashtags) or [h.strip() for h in hashtags.split(",") if h.strip()]
+    metadata = {**campaign_meta, **entry, "source": str(path)}
+    return {"topic": entry.get("topic") or entry.get("title") or f"Campaign Day {day}", "script": _compose_backlog_script(entry), "hashtags": hashtags, "metadata": metadata}
+
+
+def resolve_campaign_input(args):
+    """Return optional campaign input while preserving legacy behavior when no new flags are used."""
+    if args.backlog and args.day is None:
+        raise ValueError("--day is required when --backlog is supplied")
+    if args.day is not None and not args.backlog:
+        raise ValueError("--backlog is required when --day is supplied")
+    campaign_input = None
+    if args.backlog:
+        campaign_input = load_backlog_entry(args.backlog, args.day)
+    elif args.script_file:
+        campaign_input = load_script_file(args.script_file)
+    elif args.topic:
+        campaign_input = {"topic": args.topic, "script": None, "hashtags": [], "metadata": {}}
+    if campaign_input and args.topic:
+        campaign_input["topic"] = args.topic
+    if campaign_input:
+        campaign_input.setdefault("metadata", {})["campaign"] = args.campaign
+    return campaign_input
+
+
+def build_upload_description(video_subject, video_script, metadata):
+    description = metadata.get("description") or metadata.get("caption") or video_script or video_subject
+    cta = metadata.get("cta")
+    utm_params = metadata.get("utm_params")
+    hashtags = metadata.get("hashtags") or []
+    chunks = [str(description).strip()]
+    if cta and cta not in chunks[0]:
+        chunks.append(str(cta).strip())
+    if utm_params:
+        base_url = metadata.get("product_url") or "https://winning-cv.jackhui.com.au"
+        chunks.append(f"Try WinningCV: {base_url}?{utm_params}")
+    if hashtags:
+        chunks.append(" ".join(str(tag) for tag in hashtags))
+    return "\n\n".join(chunk for chunk in chunks if chunk)
+
+
+def tags_from_campaign(campaign_input, fallback_terms):
+    tags = (campaign_input.get("hashtags") or []) if campaign_input else []
+    cleaned = [_clean_hashtag(tag) for tag in tags if str(tag).strip()]
+    return cleaned or fallback_terms or ["WinningCV", "resume", "jobsearch", "AI"]
+
+
 def main():
     parser = argparse.ArgumentParser(description="Generate and upload videos to various platforms.")
     parser.add_argument("--language", choices=["en", "zh"], default="en", 
                        help="Language of the video")
+    parser.add_argument("--script-file", help="Use a provided Markdown/JSON script and metadata file instead of generating the script internally")
+    parser.add_argument("--topic", help="Use the provided topic as the video subject")
+    parser.add_argument("--backlog", help="Load a campaign entry from a JSON video backlog")
+    parser.add_argument("--day", type=int, help="Campaign day to load from --backlog")
+    parser.add_argument("--campaign", default="default", help="Optional campaign name for metadata/reporting, e.g. winningcv")
+    parser.add_argument("--validate-input-only", action="store_true", help="Validate campaign/script input and exit before video generation or uploads")
     args = parser.parse_args()
     language = args.language
+    campaign_input = resolve_campaign_input(args)
+    if args.validate_input_only:
+        if not campaign_input:
+            print("[Validation] No campaign/script input supplied; legacy generation path would be used.")
+            return 0
+        metadata = campaign_input.get("metadata", {})
+        tags = tags_from_campaign(campaign_input, None)
+        description = build_upload_description(campaign_input.get("topic"), campaign_input.get("script"), metadata)
+        print("[Validation] Campaign input OK")
+        print(f"[Validation] Topic: {campaign_input.get('topic')}")
+        print(f"[Validation] Script chars: {len(campaign_input.get('script') or '')}")
+        print(f"[Validation] Tags: {', '.join(tags)}")
+        print(f"[Validation] Description chars: {len(description)}")
+        return 0
     
     # Track results for summary
     results = {
@@ -56,17 +234,32 @@ def main():
         voice_name = get_random_voice(last_voice, language)
         store_last_used_voice(voice_name)
         
-        video_subject = generate_video_subject(openai_api_key, language)
-        if not video_subject:
-            raise Exception("Failed to generate video subject - no topic returned")
+        if campaign_input:
+            video_subject = campaign_input.get("topic")
+            if not video_subject:
+                raise Exception("Campaign input did not provide a topic/title")
+            print(f"[Pipeline] Using campaign input: {campaign_input.get('metadata', {}).get('source', args.campaign)}")
+        else:
+            video_subject = generate_video_subject(openai_api_key, language)
+            if not video_subject:
+                raise Exception("Failed to generate video subject - no topic returned")
         
         print(f"[Pipeline] Video subject: {video_subject}")
         
         # Step 2: Process subject and generate video
         print(f"\n[Pipeline] Step 2: Processing subject and generating video")
-        video_script, video_terms, tags = process_video_subject(video_subject, language)
-        video_urls = generate_video_and_get_urls(video_subject, video_script, video_terms, voice_name, language)
-        
+        if campaign_input and campaign_input.get("script"):
+            video_script = campaign_input["script"]
+            video_terms = tags_from_campaign(campaign_input, None)
+            tags = video_terms
+            print("[Pipeline] Using campaign-provided script/metadata")
+        else:
+            video_script, video_terms, tags = process_video_subject(video_subject, language)
+            if campaign_input:
+                tags = tags_from_campaign(campaign_input, tags)
+                video_terms = tags
+        upload_description = build_upload_description(video_subject, video_script, campaign_input.get("metadata", {}) if campaign_input else {})
+        video_urls = generate_video_and_get_urls(video_subject, video_script, video_terms, voice_name, language)        
         if not video_urls:
             raise Exception("Failed to generate video - no URLs returned")
         
@@ -96,7 +289,7 @@ def main():
                         raise Exception("Failed to download video for YouTube")
                     
                     youtube = authenticate_youtube()
-                    upload_response = upload_video(youtube, original_video_path, video_subject, video_subject, tags)
+                    upload_response = upload_video(youtube, original_video_path, video_subject, upload_description, tags)
                     
                     if upload_response:
                         video_id = upload_response["id"]
@@ -171,7 +364,7 @@ def main():
                 print(f"[Chinese] Video path: {original_video_path}")
                 
                 asyncio.run(upload_to_chinese_platforms(
-                    original_video_path, video_subject, video_subject, tags, results
+                    original_video_path, video_subject, upload_description, tags, results
                 ))
                 
             except Exception as e:
