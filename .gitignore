@@ -38,3 +38,7 @@ restart_mcp_server.sh
 *_mcp_v*.py
 uploader_rest.py
 mcp_session_reset.py
+# WinningCV private campaign/runtime files
+winning-cv-video-backlog.json
+winningcv_state.json
+winningcv.log

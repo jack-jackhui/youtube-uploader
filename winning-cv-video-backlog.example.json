@@ -1,0 +1,15 @@
+{
+  "campaign": "winningcv",
+  "start_date": "2026-01-01",
+  "videos": [
+    {
+      "day": 1,
+      "publish_date": "2026-01-01",
+      "topic": "Example career advice short",
+      "hook": "A concise placeholder hook for a short-form video.",
+      "script": "Replace this with the approved private campaign script on the production host.",
+      "cta": "Try the product or visit the campaign landing page.",
+      "hashtags": ["career", "resume", "jobsearch"]
+    }
+  ]
+}

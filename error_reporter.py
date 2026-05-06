@@ -128,7 +128,7 @@ def report_error(
     # Send email for critical/error severity
     error_info = categorize_error(str(error))
     if send_email_notification and error_info["severity"] in ["critical", "error"]:
-        subject = f"[{error_info[severity].upper()}] YouTube Uploader - {stage} Failed"
+        subject = f"[{error_info['severity'].upper()}] YouTube Uploader - {stage} Failed"
         send_email(subject, report, ["jack_hui@msn.com"])
         print(f"Error notification email sent for: {stage}")
 

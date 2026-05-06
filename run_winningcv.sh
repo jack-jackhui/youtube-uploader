@@ -13,7 +13,7 @@ cd "$SCRIPT_DIR"
 LOG_FILE="$SCRIPT_DIR/winningcv.log"
 MAX_LOG_SIZE=5000000
 LOCK_FILE="/tmp/winningcv_uploader.lock"
-BACKLOG_FILE="/home/ubuntu/clawd/gtm-plans/winning-cv-video-backlog.json"
+BACKLOG_FILE="${WINNINGCV_BACKLOG_FILE:-$SCRIPT_DIR/winning-cv-video-backlog.json}"
 STATE_FILE="$SCRIPT_DIR/winningcv_state.json"
 
 timestamp() {
@@ -44,10 +44,11 @@ trap "rm -f $LOCK_FILE" EXIT
 
 if [ ! -f "$BACKLOG_FILE" ]; then
     log "ERROR: Backlog file not found: $BACKLOG_FILE"
+    log "Set WINNINGCV_BACKLOG_FILE to the private campaign backlog path, or create $SCRIPT_DIR/winning-cv-video-backlog.json from the example."
     exit 1
 fi
 
-CAMPAIGN_DAY=$(BACKLOG_FILE="$BACKLOG_FILE" STATE_FILE="$STATE_FILE" python3 - <<"PY"
+CAMPAIGN_DAY=$(BACKLOG_FILE="$BACKLOG_FILE" STATE_FILE="$STATE_FILE" "$SCRIPT_DIR/venv/bin/python" - <<"PY"
 import json
 import os
 import sys
