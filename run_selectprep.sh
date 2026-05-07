@@ -13,7 +13,7 @@ cd "$SCRIPT_DIR"
 LOG_FILE="$SCRIPT_DIR/selectprep.log"
 MAX_LOG_SIZE=5000000
 LOCK_FILE="/tmp/selectprep_uploader.lock"
-BACKLOG_FILE="/home/ubuntu/clawd/gtm-plans/selectprep-video-backlog.json"
+BACKLOG_FILE="${SELECTPREP_BACKLOG_FILE:-$SCRIPT_DIR/selectprep-video-backlog.json}"
 STATE_FILE="$SCRIPT_DIR/selectprep_state.json"
 
 timestamp() {
@@ -47,7 +47,7 @@ if [ ! -f "$BACKLOG_FILE" ]; then
     exit 1
 fi
 
-CAMPAIGN_DAY=$(BACKLOG_FILE="$BACKLOG_FILE" STATE_FILE="$STATE_FILE" python3 - <<"PY"
+CAMPAIGN_DAY=$(BACKLOG_FILE="$BACKLOG_FILE" STATE_FILE="$STATE_FILE" "$SCRIPT_DIR/venv/bin/python" - <<"PY"
 import json
 import os
 import sys

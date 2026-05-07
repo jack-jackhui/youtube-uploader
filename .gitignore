@@ -42,3 +42,6 @@ mcp_session_reset.py
 winning-cv-video-backlog.json
 winningcv_state.json
 winningcv.log
+selectprep-video-backlog.json
+selectprep_state.json
+selectprep.log
