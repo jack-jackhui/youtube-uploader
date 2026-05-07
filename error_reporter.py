@@ -155,9 +155,9 @@ PIPELINE RUN SUMMARY - {timestamp}
         status = "✅ SUCCESS" if result.get("success") else "❌ FAILED"
         summary += f"\n{stage}: {status}"
         if result.get("details"):
-            summary += f" - {result[details]}"
+            summary += f" - {result['details']}"
         if result.get("error"):
-            summary += f"\n   Error: {result[error][:100]}..."
+            summary += f"\n   Error: {result['error'][:100]}..."
     
     summary += "\n================================================================================"
     return summary

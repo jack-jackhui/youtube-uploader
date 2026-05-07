@@ -1,0 +1,53 @@
+{
+  "campaign": "SelectPrep Launch",
+  "platforms": [
+    "youtube",
+    "instagram"
+  ],
+  "schedule": "daily",
+  "start_date": "2026-06-01",
+  "cta_overlay": {
+    "enabled": true,
+    "text": "Ace your interview",
+    "url": "selectprep.com.au",
+    "position": "lower_third",
+    "style": "box",
+    "start_seconds_from_end": 8,
+    "end_card_seconds": 2,
+    "publish_public": true
+  },
+  "videos": [
+    {
+      "day": 1,
+      "publish_date": "2026-06-01",
+      "topic": "5 Interview Questions That Trip Up Even Experienced Candidates",
+      "hook": "These 5 questions catch even senior candidates off guard — here's how to answer them.",
+      "script_outline": "Open with why experience doesn't always help; question 1: Tell me about yourself; question 2: Why are you leaving; question 3: Weakness question trap; question 4: Where do you see yourself; question 5: Do you have questions; close with practicing on SelectPrep.",
+      "cta": "Try SelectPrep free at selectprep.com.au",
+      "hashtags": [
+        "#SelectPrep",
+        "#interview",
+        "#jobsearch",
+        "#AI",
+        "#careeradvice"
+      ],
+      "utm_params": "utm_source=video&utm_medium=short&utm_campaign=day1_interview_questions"
+    },
+    {
+      "day": 2,
+      "publish_date": "2026-06-02",
+      "topic": "How to Answer 'Tell Me About Yourself' Without Rambling",
+      "hook": "The first question of every interview is also the easiest to mess up.",
+      "script_outline": "Frame the problem: most answers are too long or too generic; show the 3-part structure; demonstrate with an example; explain how to tailor to the role; mention SelectPrep's instant feedback.",
+      "cta": "Try SelectPrep free at selectprep.com.au",
+      "hashtags": [
+        "#SelectPrep",
+        "#interview",
+        "#jobsearch",
+        "#AI",
+        "#careeradvice"
+      ],
+      "utm_params": "utm_source=video&utm_medium=short&utm_campaign=day2_tell_me_about_yourself"
+    }
+  ]
+}

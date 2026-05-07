@@ -45,7 +45,7 @@ def parse_api_error(response_text: str) -> dict:
         }
 
 
-def create_media_container(ig_user_id, video_url, access_token):
+def create_media_container(ig_user_id, video_url, access_token, caption=None):
     """
     Creates a media container on Instagram for the given video URL.
     
@@ -58,6 +58,8 @@ def create_media_container(ig_user_id, video_url, access_token):
         "video_url": video_url,
         "access_token": access_token
     }
+    if caption:
+        payload["caption"] = caption[:2200]
     
     response = requests.post(url, json=payload)
     
@@ -69,7 +71,7 @@ def create_media_container(ig_user_id, video_url, access_token):
     
     error_info = parse_api_error(response.text)
     raise InstagramPublishError(
-        f"Failed to create media container: {error_info[message]}",
+        f"Failed to create media container: {error_info['message']}",
         error_type=error_info["type"],
         error_code=error_info["code"],
         is_token_error=error_info["is_token_error"]
@@ -99,7 +101,7 @@ def check_media_container_status(container_id, access_token):
     
     error_info = parse_api_error(response.text)
     raise InstagramPublishError(
-        f"Failed to check container status: {error_info[message]}",
+        f"Failed to check container status: {error_info['message']}",
         error_type=error_info["type"],
         error_code=error_info["code"],
         is_token_error=error_info["is_token_error"]
@@ -132,14 +134,14 @@ def publish_media(ig_user_id, container_id, access_token):
     
     error_info = parse_api_error(response.text)
     raise InstagramPublishError(
-        f"Failed to publish media: {error_info[message]}",
+        f"Failed to publish media: {error_info['message']}",
         error_type=error_info["type"],
         error_code=error_info["code"],
         is_token_error=error_info["is_token_error"]
     )
 
 
-def publish_video_to_instagram(ig_user_id, video_url, access_token, max_retries=5, retry_wait=60):
+def publish_video_to_instagram(ig_user_id, video_url, access_token, caption=None, max_retries=5, retry_wait=60):
     """
     Publishes a video to Instagram Reels.
     
@@ -162,7 +164,7 @@ def publish_video_to_instagram(ig_user_id, video_url, access_token, max_retries=
     try:
         # Step 1: Create media container
         print(f"[Instagram] Creating media container for: {video_url}")
-        container_id = create_media_container(ig_user_id, video_url, access_token)
+        container_id = create_media_container(ig_user_id, video_url, access_token, caption=caption)
         print(f"[Instagram] Container created: {container_id}")
         context["container_id"] = container_id
         

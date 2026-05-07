@@ -21,6 +21,14 @@ from instagram_publisher import publish_video_to_instagram
 from main_cn import main as chinese_uploader_main
 from error_reporter import report_error, report_success, create_run_summary
 
+# CTA Overlay module (optional - graceful fallback if not available)
+try:
+    from cta_overlay import process_video_with_overlay, OverlayConfig
+    CTA_OVERLAY_AVAILABLE = True
+except ImportError:
+    CTA_OVERLAY_AVAILABLE = False
+    print("[main.py] CTA overlay module not available - overlays disabled")
+
 # Determine which .env file to load
 env = os.getenv("ENV", "development")
 dotenv_path = f".env.{env}"
@@ -216,6 +224,11 @@ def main():
         print(f"[Validation] Script chars: {len(campaign_input.get('script') or '')}")
         print(f"[Validation] Tags: {', '.join(tags)}")
         print(f"[Validation] Description chars: {len(description)}")
+        # Validate CTA overlay config if present
+        overlay_config = metadata.get("cta_overlay", {})
+        if overlay_config.get("enabled"):
+            print(f"[Validation] CTA Overlay: enabled")
+            print(f"[Validation] CTA Text: {overlay_config.get('text', '')} : {overlay_config.get('url', '')}")
         return 0
     
     # Track results for summary
@@ -226,6 +239,7 @@ def main():
     }
     
     video_subject = None
+    overlay_result = None  # Track overlay processing result
     
     try:
         # Step 1: Generate video subject
@@ -288,6 +302,26 @@ def main():
                     if not original_video_path:
                         raise Exception("Failed to download video for YouTube")
                     
+                    # Apply CTA overlay if configured and available
+                    if CTA_OVERLAY_AVAILABLE and campaign_input:
+                        campaign_metadata = campaign_input.get("metadata", {})
+                        campaign_name = args.campaign
+                        
+                        print(f"[Pipeline] Checking for CTA overlay (campaign={campaign_name})")
+                        overlay_result = process_video_with_overlay(
+                            original_video_path,
+                            campaign_metadata,
+                            campaign_name=campaign_name,
+                            video_subject=video_subject
+                        )
+                        
+                        if overlay_result.get("overlay_applied"):
+                            print(f"[Pipeline] CTA overlay applied successfully")
+                            original_video_path = overlay_result["processed_path"]
+                            results["CTA Overlay"] = {"success": True}
+                        else:
+                            print(f"[Pipeline] No CTA overlay configured for this campaign")
+                    
                     youtube = authenticate_youtube()
                     upload_response = upload_video(youtube, original_video_path, video_subject, upload_description, tags)
                     
@@ -314,10 +348,16 @@ def main():
             else:
                 print(f"\n[Pipeline] Step 3b: Uploading to Instagram")
                 try:
-                    upload_url = converted_video_url if converted_video_url else original_video_url
-                    print(f"[Instagram] Using video URL: {upload_url}")
+                    # Determine which URL to use for Instagram
+                    # Priority: 1) Public URL from overlay, 2) converted_video_url, 3) original_video_url
+                    if overlay_result and overlay_result.get("public_url"):
+                        upload_url = overlay_result["public_url"]
+                        print(f"[Instagram] Using CTA overlay public URL: {upload_url}")
+                    else:
+                        upload_url = converted_video_url if converted_video_url else original_video_url
+                        print(f"[Instagram] Using video URL: {upload_url}")
                     
-                    success, result = publish_video_to_instagram(ig_user_id, upload_url, ig_access_token)
+                    success, result = publish_video_to_instagram(ig_user_id, upload_url, ig_access_token, caption=upload_description)
                     
                     if success:
                         results["Instagram Upload"] = {
