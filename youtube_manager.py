@@ -48,9 +48,22 @@ def sanitize_title(title):
     return title
 
 
-def authenticate_youtube():
+def authenticate_youtube(force_readonly=False):
+    """
+    Authenticate with YouTube API.
+    
+    Args:
+        force_readonly: If True, use readonly scope (for status checks only)
+        
+    Returns:
+        Authenticated YouTube service object
+    """
     # Define the scopes required by the application.
-    scopes = ["https://www.googleapis.com/auth/youtube.upload"]
+    # We need both upload AND readonly for status checks
+    scopes = [
+        "https://www.googleapis.com/auth/youtube.upload",
+        "https://www.googleapis.com/auth/youtube.readonly"  # For video status checks
+    ]
 
     # Path to your client_secrets.json file
     client_secrets_file = os.path.join(os.path.dirname(__file__), "client_secrets.json")
@@ -174,3 +187,51 @@ def update_video_privacy(youtube, video_id, privacy_status):
     response = request.execute()
     print(f"Updated video {video_id} privacy to: {privacy_status}")
     return response
+
+
+def get_video_status(youtube, video_id):
+    """
+    Get the processing and upload status of a video.
+    
+    Args:
+        youtube: Authenticated YouTube service object
+        video_id: YouTube video ID
+    
+    Returns:
+        Dict with status info:
+        {
+            "video_id": str,
+            "upload_status": str,  # deleted, failed, processed, rejected, uploaded
+            "processing_status": str,  # processing, succeeded, failed, terminated
+            "privacy_status": str,  # private, unlisted, public
+            "rejection_reason": str or None,
+            "failure_reason": str or None,
+            "embeddable": bool,
+            "license": str,
+            "public_stats_viewable": bool,
+        }
+    """
+    request = youtube.videos().list(
+        part="status,processingDetails,contentDetails",
+        id=video_id
+    )
+    response = request.execute()
+    
+    if not response.get("items"):
+        raise ValueError(f"Video not found: {video_id}")
+    
+    item = response["items"][0]
+    status_data = item.get("status", {})
+    processing_data = item.get("processingDetails", {})
+    
+    return {
+        "video_id": video_id,
+        "upload_status": status_data.get("uploadStatus", ""),
+        "processing_status": processing_data.get("processingStatus", ""),
+        "privacy_status": status_data.get("privacyStatus", ""),
+        "rejection_reason": status_data.get("rejectionReason"),
+        "failure_reason": status_data.get("failureReason"),
+        "embeddable": status_data.get("embeddable", True),
+        "license": status_data.get("license", ""),
+        "public_stats_viewable": status_data.get("publicStatsViewable", True),
+    }

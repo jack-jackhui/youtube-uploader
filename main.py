@@ -25,6 +25,14 @@ from main_cn import main as chinese_uploader_main
 from error_reporter import report_error, report_success, create_run_summary
 from compliance_gate import check_before_upload, ComplianceResult
 
+# Auto-publish checker (optional - checks processing status and auto-publishes if clean)
+try:
+    from auto_publish_checker import AutoPublishChecker
+    AUTO_PUBLISH_AVAILABLE = True
+except ImportError:
+    AUTO_PUBLISH_AVAILABLE = False
+    print("[main.py] Auto-publish checker not available")
+
 # CTA Overlay module (optional - graceful fallback if not available)
 try:
     from cta_overlay import process_video_with_overlay, OverlayConfig
@@ -420,9 +428,47 @@ def main():
                         # Log instructions for manual publish if uploaded as private
                         if privacy == "private":
                             print(f"\n[YouTube] Video uploaded as PRIVATE for safety review.")
-                            print(f"[YouTube] To publish after review, run:")
-                            print(f"    python main.py --publish-after-check --video-id {video_id}")
-                            print(f"[YouTube] Or set YOUTUBE_DEFAULT_PRIVACY=public in .env")
+                            
+                            # Check if auto-publish is enabled
+                            auto_publish_enabled = os.getenv("YOUTUBE_AUTO_PUBLISH_AFTER_CHECK", "false").lower() == "true"
+                            
+                            if auto_publish_enabled and AUTO_PUBLISH_AVAILABLE:
+                                print(f"[YouTube] Auto-publish enabled - checking processing status...")
+                                results["Auto-Publish Check"] = {"success": False}
+                                try:
+                                    checker = AutoPublishChecker(youtube_service=youtube)
+                                    auto_result = checker.check_and_publish(video_id)
+                                    
+                                    if auto_result.published:
+                                        results["Auto-Publish Check"] = {
+                                            "success": True,
+                                            "details": f"Published as {auto_result.new_privacy}"
+                                        }
+                                        report_success("Auto-Publish", {
+                                            "video_id": video_id,
+                                            "new_privacy": auto_result.new_privacy
+                                        })
+                                    else:
+                                        results["Auto-Publish Check"] = {
+                                            "success": False,
+                                            "details": f"Kept private: {auto_result.reason}"
+                                        }
+                                        print(f"[YouTube] Video kept private: {auto_result.reason}")
+                                        print(f"[YouTube] To manually publish after review, run:")
+                                        print(f"    python publish_video.py {video_id}")
+                                except Exception as ap_error:
+                                    results["Auto-Publish Check"]["error"] = str(ap_error)
+                                    report_error("Auto-Publish Check", ap_error, {"video_id": video_id})
+                                    print(f"[YouTube] Auto-publish check failed: {ap_error}")
+                                    print(f"[YouTube] To manually publish after review, run:")
+                                    print(f"    python publish_video.py {video_id}")
+                            else:
+                                # Manual publish instructions
+                                print(f"[YouTube] To publish after review, run:")
+                                print(f"    python main.py --publish-after-check --video-id {video_id}")
+                                print(f"[YouTube] Or set YOUTUBE_DEFAULT_PRIVACY=public in .env")
+                                if not AUTO_PUBLISH_AVAILABLE:
+                                    print(f"[YouTube] Note: auto_publish_checker module not available")
                     else:
                         raise Exception("Upload returned no response")
                         
