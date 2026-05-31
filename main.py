@@ -1,6 +1,9 @@
 # main.py
 """
 AI Video Pipeline - Generates and uploads videos to YouTube, Instagram, and Chinese platforms.
+
+Safety: Videos are uploaded as PRIVATE by default. Set YOUTUBE_DEFAULT_PRIVACY=public to change.
+Compliance: Pre-upload checks run automatically. Set COMPLIANCE_STRICT_MODE=true for stricter checks.
 """
 
 import asyncio
@@ -10,7 +13,7 @@ import re
 import sys
 from pathlib import Path
 import video_api_call
-from youtube_manager import authenticate_youtube, upload_video
+from youtube_manager import authenticate_youtube, upload_video, update_video_privacy
 from voice_manager import get_last_used_voice, get_random_voice, store_last_used_voice
 from video_manager import generate_video_subject, process_video_subject, generate_video_and_get_urls
 from dotenv import load_dotenv
@@ -20,6 +23,7 @@ from email_notifier import send_email
 from instagram_publisher import publish_video_to_instagram
 from main_cn import main as chinese_uploader_main
 from error_reporter import report_error, report_success, create_run_summary
+from compliance_gate import check_before_upload, ComplianceResult
 
 # CTA Overlay module (optional - graceful fallback if not available)
 try:
@@ -199,6 +203,40 @@ def tags_from_campaign(campaign_input, fallback_terms):
     return cleaned or fallback_terms or ["WinningCV", "resume", "jobsearch", "AI"]
 
 
+def run_compliance_check(video_path, title, description, source_url, tags):
+    """
+    Run pre-upload compliance check.
+    
+    Returns:
+        ComplianceResult with pass/fail status
+    """
+    print(f"\n[Compliance] Running pre-upload compliance check...")
+    
+    result = check_before_upload(
+        video_path=video_path,
+        title=title,
+        description=description,
+        source_url=source_url,
+        tags=tags,
+        strict=os.getenv("COMPLIANCE_STRICT_MODE", "false").lower() == "true"
+    )
+    
+    if result.issues:
+        print(f"[Compliance] FAILED - Issues found:")
+        for issue in result.issues:
+            print(f"  - {issue}")
+    
+    if result.warnings:
+        print(f"[Compliance] Warnings:")
+        for warning in result.warnings:
+            print(f"  - {warning}")
+    
+    if result.passed:
+        print(f"[Compliance] Passed all checks")
+    
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description="Generate and upload videos to various platforms.")
     parser.add_argument("--language", choices=["en", "zh"], default="en", 
@@ -209,7 +247,25 @@ def main():
     parser.add_argument("--day", type=int, help="Campaign day to load from --backlog")
     parser.add_argument("--campaign", default="default", help="Optional campaign name for metadata/reporting, e.g. winningcv")
     parser.add_argument("--validate-input-only", action="store_true", help="Validate campaign/script input and exit before video generation or uploads")
+    parser.add_argument("--skip-compliance", action="store_true", help="Skip compliance checks (use with caution)")
+    parser.add_argument("--publish-after-check", action="store_true", help="Publish video after manual compliance check (requires video_id)")
+    parser.add_argument("--video-id", type=str, help="YouTube video ID for --publish-after-check")
     args = parser.parse_args()
+    
+    # Handle publish-after-check mode
+    if args.publish_after_check:
+        if not args.video_id:
+            print("Error: --video-id required with --publish-after-check")
+            return 1
+        try:
+            youtube = authenticate_youtube()
+            update_video_privacy(youtube, args.video_id, "public")
+            print(f"Video {args.video_id} is now PUBLIC")
+            print(f"  URL: https://youtube.com/watch?v={args.video_id}")
+            return 0
+        except Exception as e:
+            print(f"Error publishing video: {e}")
+            return 1
     language = args.language
     campaign_input = resolve_campaign_input(args)
     if args.validate_input_only:
@@ -234,6 +290,7 @@ def main():
     # Track results for summary
     results = {
         "Video Generation": {"success": False},
+        "Compliance Check": {"success": False, "skipped": False},
         "YouTube Upload": {"success": False, "skipped": False},
         "Instagram Upload": {"success": False, "skipped": False}
     }
@@ -302,6 +359,31 @@ def main():
                     if not original_video_path:
                         raise Exception("Failed to download video for YouTube")
                     
+                    # Run compliance check before upload
+                    if args.skip_compliance:
+                        results["Compliance Check"]["skipped"] = True
+                        print("[Pipeline] Compliance check skipped (--skip-compliance)")
+                    else:
+                        compliance_result = run_compliance_check(
+                            video_path=original_video_path,
+                            title=video_subject,
+                            description=upload_description,
+                            source_url=original_video_url,
+                            tags=tags
+                        )
+                        
+                        if not compliance_result.passed:
+                            results["Compliance Check"] = {
+                                "success": False,
+                                "error": "; ".join(compliance_result.issues)
+                            }
+                            # In strict mode, abort upload
+                            if os.getenv("COMPLIANCE_ABORT_ON_FAIL", "false").lower() == "true":
+                                raise Exception(f"Compliance check failed: {compliance_result.issues}")
+                            print("[Compliance] Continuing despite failures (COMPLIANCE_ABORT_ON_FAIL=false)")
+                        else:
+                            results["Compliance Check"] = {"success": True}
+                    
                     # Apply CTA overlay if configured and available
                     if CTA_OVERLAY_AVAILABLE and campaign_input:
                         campaign_metadata = campaign_input.get("metadata", {})
@@ -327,12 +409,20 @@ def main():
                     
                     if upload_response:
                         video_id = upload_response["id"]
+                        privacy = os.getenv("YOUTUBE_DEFAULT_PRIVACY", "private")
                         results["YouTube Upload"] = {
                             "success": True,
-                            "details": f"Video ID: {video_id}"
+                            "details": f"Video ID: {video_id} (privacy: {privacy})"
                         }
-                        send_notification_email(video_id)
-                        report_success("YouTube Upload", {"video_id": video_id})
+                        send_notification_email(video_id, privacy)
+                        report_success("YouTube Upload", {"video_id": video_id, "privacy": privacy})
+                        
+                        # Log instructions for manual publish if uploaded as private
+                        if privacy == "private":
+                            print(f"\n[YouTube] Video uploaded as PRIVATE for safety review.")
+                            print(f"[YouTube] To publish after review, run:")
+                            print(f"    python main.py --publish-after-check --video-id {video_id}")
+                            print(f"[YouTube] Or set YOUTUBE_DEFAULT_PRIVACY=public in .env")
                     else:
                         raise Exception("Upload returned no response")
                         
@@ -475,9 +565,22 @@ def send_chinese_platform_notification_email(platform_name, video_name):
     send_email(subject, body, ["jack_hui@msn.com"])
 
 
-def send_notification_email(video_id):
-    subject = "YouTube Video Uploaded Successfully"
-    body = f"Your video has been uploaded to YouTube!\n\nVideo ID: {video_id}\nURL: https://youtube.com/watch?v={video_id}"
+def send_notification_email(video_id, privacy="private"):
+    subject = f"YouTube Video Uploaded ({privacy.upper()})"
+    body = f"""Your video has been uploaded to YouTube!
+
+Video ID: {video_id}
+URL: https://youtube.com/watch?v={video_id}
+Privacy: {privacy.upper()}
+"""
+    if privacy == "private":
+        body += f"""
+The video was uploaded as PRIVATE for safety review.
+To publish it, run:
+    python main.py --publish-after-check --video-id {video_id}
+
+Or set YOUTUBE_DEFAULT_PRIVACY=public in your .env file for future uploads.
+"""
     send_email(subject, body, ["jack_hui@msn.com"])
 
 
