@@ -8,7 +8,7 @@
   "start_date": "2026-06-01",
   "cta_overlay": {
     "enabled": true,
-    "text": "Ace your interview",
+    "text": "Ace selective entry exams",
     "url": "selectprep.com.au",
     "position": "lower_third",
     "style": "box",
@@ -20,34 +20,36 @@
     {
       "day": 1,
       "publish_date": "2026-06-01",
-      "topic": "5 Interview Questions That Trip Up Even Experienced Candidates",
-      "hook": "These 5 questions catch even senior candidates off guard — here's how to answer them.",
-      "script_outline": "Open with why experience doesn't always help; question 1: Tell me about yourself; question 2: Why are you leaving; question 3: Weakness question trap; question 4: Where do you see yourself; question 5: Do you have questions; close with practicing on SelectPrep.",
+      "topic": "5 SEHS Exam Mistakes That Cost Students Entry",
+      "hook": "These 5 mistakes are why smart students miss Selective Entry — and they are all preventable.",
+      "script_outline": "Open with the stakes of selective entry exams; mistake 1: starting prep too late; mistake 2: only practicing easy topics; mistake 3: ignoring time management; mistake 4: skipping unfamiliar question types; mistake 5: not doing full-length practice tests; close with how SelectPrep helps students find and fix gaps.",
       "cta": "Try SelectPrep free at selectprep.com.au",
       "hashtags": [
         "#SelectPrep",
-        "#interview",
-        "#jobsearch",
-        "#AI",
-        "#careeradvice"
+        "#SEHS",
+        "#selectiveentry",
+        "#Melbourne",
+        "#examprep"
       ],
-      "utm_params": "utm_source=video&utm_medium=short&utm_campaign=day1_interview_questions"
+      "utm_params": "utm_source=video&utm_medium=short&utm_campaign=day1_5_sehs_mistakes"
     },
     {
       "day": 2,
       "publish_date": "2026-06-02",
-      "topic": "How to Answer 'Tell Me About Yourself' Without Rambling",
-      "hook": "The first question of every interview is also the easiest to mess up.",
-      "script_outline": "Frame the problem: most answers are too long or too generic; show the 3-part structure; demonstrate with an example; explain how to tailor to the role; mention SelectPrep's instant feedback.",
+      "topic": "How Early Should Students Start Selective Entry Exam Prep?",
+      "hook": "Cramming rarely works for Selective Entry — here is a smarter timeline.",
+      "script_outline": "Explain a practical 6-12 month preparation window; start with diagnostic testing; build weekly practice habits; increase timed tests near exam day; use analytics to target weak areas instead of repeating what already feels easy.",
       "cta": "Try SelectPrep free at selectprep.com.au",
       "hashtags": [
         "#SelectPrep",
-        "#interview",
-        "#jobsearch",
-        "#AI",
-        "#careeradvice"
+        "#selectiveentry",
+        "#SEHS",
+        "#studytips",
+        "#examprep"
       ],
-      "utm_params": "utm_source=video&utm_medium=short&utm_campaign=day2_tell_me_about_yourself"
+      "utm_params": "utm_source=video&utm_medium=short&utm_campaign=day2_prep_timeline"
     }
-  ]
+  ],
+  "product_name": "SelectPrep",
+  "product_url": "https://selectprep.com.au"
 }

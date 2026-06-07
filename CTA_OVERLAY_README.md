@@ -70,7 +70,7 @@ Override campaign-level settings for specific videos:
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `enabled` | boolean | `false` | Enable/disable overlay |
-| `text` | string | `""` | Main CTA text (e.g., "Try WinningCV free") |
+| `text` | string | `""` | Main CTA text (e.g., "Try WinningCV free", "Ace selective entry exams") |
 | `url` | string | `""` | URL to display (e.g., "winning-cv.jackhui.com.au") |
 | `position` | string | `"lower_third"` | Where overlay appears: `lower_third`, `center`, `top` |
 | `style` | string | `"box"` | Visual style: `box` (dark background), `shadow`, `minimal` |
@@ -104,7 +104,7 @@ The module includes built-in presets for common campaigns:
 ```json
 {
   "enabled": true,
-  "text": "Ace your interview",
+  "text": "Ace selective entry exams",
   "url": "selectprep.com.au",
   "position": "lower_third",
   "style": "box",

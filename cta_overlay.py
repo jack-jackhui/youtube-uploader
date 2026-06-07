@@ -152,7 +152,7 @@ PRESETS: Dict[str, Dict[str, Any]] = {
     },
     "selectprep": {
         "enabled": True,
-        "text": "Ace your interview",
+        "text": "Ace selective entry exams",
         "url": "selectprep.com.au",
         "position": "lower_third",
         "style": "box",

@@ -198,8 +198,17 @@ def build_upload_description(video_subject, video_script, metadata):
     if cta and cta not in chunks[0]:
         chunks.append(str(cta).strip())
     if utm_params:
-        base_url = metadata.get("product_url") or "https://winning-cv.jackhui.com.au"
-        chunks.append(f"Try WinningCV: {base_url}?{utm_params}")
+        campaign_name = str(metadata.get("campaign") or "").lower()
+        if metadata.get("product_url"):
+            base_url = metadata["product_url"]
+            label = metadata.get("product_name") or metadata.get("campaign") or "Learn more"
+        elif "selectprep" in campaign_name:
+            base_url = "https://selectprep.com.au"
+            label = "Try SelectPrep"
+        else:
+            base_url = "https://winning-cv.jackhui.com.au"
+            label = "Try WinningCV"
+        chunks.append(f"{label}: {base_url}?{utm_params}")
     if hashtags:
         chunks.append(" ".join(str(tag) for tag in hashtags))
     return "\n\n".join(chunk for chunk in chunks if chunk)
