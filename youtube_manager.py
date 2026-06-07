@@ -59,11 +59,9 @@ def authenticate_youtube(force_readonly=False):
         Authenticated YouTube service object
     """
     # Define the scopes required by the application.
-    # We need both upload AND readonly for status checks
-    scopes = [
-        "https://www.googleapis.com/auth/youtube.upload",
-        "https://www.googleapis.com/auth/youtube.readonly"  # For video status checks
-    ]
+    # youtube.force-ssl covers upload, status/list checks, and privacy updates.
+    # youtube.upload alone cannot call videos.update(part=status).
+    scopes = ["https://www.googleapis.com/auth/youtube.force-ssl"]
 
     # Path to your client_secrets.json file
     client_secrets_file = os.path.join(os.path.dirname(__file__), "client_secrets.json")
@@ -77,20 +75,18 @@ def authenticate_youtube(force_readonly=False):
         with open(credentials_path, "rb") as token:
             credentials = pickle.load(token)
 
-    # Check if the loaded credentials are still valid
-    if not credentials or not credentials.valid:
-        if credentials and credentials.expired and credentials.refresh_token:
+    # Check if the loaded credentials are still valid and include the required scopes.
+    # Existing pickles do not automatically gain newly requested scopes on refresh.
+    has_required_scopes = bool(credentials and credentials.has_scopes(scopes))
+    if not credentials or not credentials.valid or not has_required_scopes:
+        if credentials and credentials.expired and credentials.refresh_token and has_required_scopes:
             # Refresh the access token automatically if possible
             credentials.refresh(Request())
         else:
-            # No valid credentials available, prompt user for authorization
-            flow = InstalledAppFlow.from_client_secrets_file(
-                client_secrets_file, scopes=scopes)
-            credentials = flow.run_local_server(port=4000)
-
-            # Save the credentials for the next run
-            with open(credentials_path, "wb") as token:
-                pickle.dump(credentials, token)
+            raise RuntimeError(
+                "YouTube OAuth reauthorization required: youtube_credentials.pickle "
+                "does not include youtube.force-ssl scope. Run the manual reauth flow."
+            )
 
     # Build the service object.
     youtube = build("youtube", "v3", credentials=credentials)
