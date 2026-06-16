@@ -386,17 +386,17 @@ def main():
 
                     # Add controlled, self-generated BGM after generation.
                     # The upstream video API random BGM pool triggered YouTube Content ID claims.
-                    if os.getenv("SAFE_BGM_ENABLED", "true").lower() == "true":
+                    if os.getenv("SAFE_BGM_ENABLED", "false").lower() == "true":
                         if SAFE_BGM_AVAILABLE:
                             try:
                                 original_video_path = add_safe_background_music(original_video_path)
                                 results["Safe BGM"] = {"success": True}
                             except Exception as bgm_error:
                                 results["Safe BGM"] = {"success": False, "error": str(bgm_error)}
-                                if os.getenv("SAFE_BGM_REQUIRED", "true").lower() == "true":
+                                if os.getenv("SAFE_BGM_REQUIRED", "false").lower() == "true":
                                     raise Exception(f"Safe BGM mix failed: {bgm_error}")
                                 print(f"[SafeBGM] Failed, continuing without BGM: {bgm_error}")
-                        elif os.getenv("SAFE_BGM_REQUIRED", "true").lower() == "true":
+                        elif os.getenv("SAFE_BGM_REQUIRED", "false").lower() == "true":
                             raise Exception("Safe BGM is enabled but safe_background_music.py is unavailable")
                     else:
                         results["Safe BGM"] = {"skipped": True}

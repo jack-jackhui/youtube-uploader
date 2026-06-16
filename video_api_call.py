@@ -4,6 +4,9 @@ import requests
 import os
 import re
 import time
+import json
+import random
+from pathlib import Path
 import unidecode
 def generate_video_script(api_key, api_host, video_subject, video_language='en', paragraph_number=1):
     api_url = f'{api_host}/api/v1/scripts'
@@ -47,6 +50,30 @@ def generate_video_terms(api_key, api_host, video_subject, video_script, amount,
     else:
         raise Exception(f"Error: {response.status_code} - {response.json().get('message')}")
 
+
+
+def _select_approved_bgm():
+    """Return an approved server-side BGM path for ai-video-api custom BGM."""
+    if os.getenv("APPROVED_BGM_ENABLED", "true").lower() == "false":
+        return ""
+
+    explicit_file = os.getenv("APPROVED_BGM_FILE", "").strip()
+    if explicit_file:
+        return explicit_file
+
+    manifest_path = Path(os.getenv("APPROVED_BGM_MANIFEST", "assets/music/approved/manifest.json"))
+    try:
+        manifest = json.loads(manifest_path.read_text())
+        tracks = [track for track in manifest.get("tracks", []) if track.get("file")]
+        if tracks:
+            track = random.choice(tracks)
+            print(f"[BGM] Using approved local API BGM: {track.get('id', track['file'])}")
+            return track["file"]
+    except Exception as exc:
+        print(f"[BGM] Approved BGM manifest unavailable: {exc}")
+
+    return ""
+
 def generate_video(api_key, api_host, video_subject, video_script, video_terms, voice_name, video_aspect="9:16",
                    video_concat_mode="random", video_clip_duration=5, video_count=1, video_language="",
                    voice_volume=1, bgm_type=None, bgm_file="", bgm_volume=None,
@@ -56,11 +83,17 @@ def generate_video(api_key, api_host, video_subject, video_script, video_terms, 
     api_url = f'{api_host}/api/v1/videos'
     headers = {'X-API-Key': api_key}
     if bgm_type is None:
-        # YouTube Shorts >=60s can be globally blocked when copyrighted BGM is detected.
-        # Default to no BGM; set VIDEO_BGM_TYPE=random and VIDEO_BGM_VOLUME=0.2 to re-enable.
-        bgm_type = os.getenv("VIDEO_BGM_TYPE", "")
+        # YouTube Shorts >=60s can be globally blocked when random third-party BGM is detected.
+        # Use our approved ai-video-api local music library by default.
+        approved_bgm_file = _select_approved_bgm()
+        if approved_bgm_file:
+            bgm_type = os.getenv("APPROVED_BGM_TYPE", "custom")
+            bgm_file = approved_bgm_file
+        else:
+            # Explicit opt-in only for upstream random music; not recommended for YouTube.
+            bgm_type = os.getenv("VIDEO_BGM_TYPE", "")
     if bgm_volume is None:
-        bgm_volume = float(os.getenv("VIDEO_BGM_VOLUME", "0"))
+        bgm_volume = float(os.getenv("APPROVED_BGM_VOLUME", os.getenv("VIDEO_BGM_VOLUME", "0.12" if bgm_file else "0")))
     payload = {
         "video_subject": video_subject,
         "video_script": video_script,

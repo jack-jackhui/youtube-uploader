@@ -1,0 +1,31 @@
+{
+  "tracks": [
+    {
+      "id": "jh_calm_future_01",
+      "file": "/AiVideoApp/resource/songs/jh_calm_future_01.mp3",
+      "local_file": "assets/music/approved/jh_calm_future_01.mp3",
+      "sha256": "37f2a95df03ad20b2fae548afb8c816a8580794e937b17842a8bda12820d1e48",
+      "source": "locally generated procedural audio",
+      "license": "owned/generated",
+      "mood": ["calm", "future", "tech"]
+    },
+    {
+      "id": "jh_tech_ambient_01",
+      "file": "/AiVideoApp/resource/songs/jh_tech_ambient_01.mp3",
+      "local_file": "assets/music/approved/jh_tech_ambient_01.mp3",
+      "sha256": "4d4a6cf01b77bb14903e9b6c901230744c5d83d0015ecb167a13b85c74459617",
+      "source": "locally generated procedural audio",
+      "license": "owned/generated",
+      "mood": ["ambient", "tech", "explainer"]
+    },
+    {
+      "id": "jh_upbeat_pulse_01",
+      "file": "/AiVideoApp/resource/songs/jh_upbeat_pulse_01.mp3",
+      "local_file": "assets/music/approved/jh_upbeat_pulse_01.mp3",
+      "sha256": "f54796e9b35999f97036073488fc5f4ce395b09e2f7bf29efa518f055752b4a4",
+      "source": "locally generated procedural audio",
+      "license": "owned/generated",
+      "mood": ["upbeat", "pulse", "tech"]
+    }
+  ]
+}
