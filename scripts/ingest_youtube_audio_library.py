@@ -1,16 +1,5 @@
 #!/usr/bin/env python3
-"""Ingest downloaded YouTube Audio Library MP3s into ai-video-api approved BGM.
-
-Usage:
-  ENV=production python scripts/ingest_youtube_audio_library.py /path/to/downloads/*.mp3 \
-    --mood tech --mood ambient --source-note "YouTube Audio Library; attribution not required"
-
-The script:
-- computes SHA256
-- optionally transcodes long/large MP3s to a 30s loop seed under the nginx upload limit
-- uploads each file to ai-video-api /api/v1/musics
-- appends/updates assets/music/approved/manifest.json
-"""
+"""Ingest downloaded YouTube Audio Library MP3s into ai-video-api approved BGM."""
 from __future__ import annotations
 
 import argparse
@@ -24,7 +13,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
-from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "assets/music/approved/manifest.json"
@@ -44,6 +32,18 @@ def sha256(path: Path) -> str:
         for chunk in iter(lambda: f.read(1024 * 1024), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def load_env(env: str) -> None:
+    env_file = ROOT / f".env.{env}"
+    if not env_file.exists():
+        return
+    for line in env_file.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
 
 
 def transcode_for_upload(src: Path, track_id: str, max_bytes: int) -> Path:
@@ -78,7 +78,7 @@ def load_manifest() -> dict:
 
 def save_manifest(manifest: dict) -> None:
     MANIFEST.parent.mkdir(parents=True, exist_ok=True)
-    MANIFEST.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n")
+    MANIFEST.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + chr(10))
 
 
 def upload(api_host: str, api_key: str, path: Path) -> str:
@@ -105,7 +105,7 @@ def main() -> int:
     args = ap.parse_args()
 
     env = os.getenv("ENV", "production")
-    load_dotenv(ROOT / f".env.{env}")
+    load_env(env)
     api_host = os.getenv("API_HOST")
     api_key = os.getenv("API_KEY")
     if not api_host or not api_key:
