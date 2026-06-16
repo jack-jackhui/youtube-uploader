@@ -25,6 +25,14 @@ from main_cn import main as chinese_uploader_main
 from error_reporter import report_error, report_success, create_run_summary
 from compliance_gate import check_before_upload, ComplianceResult
 
+# Safe background music mixer (generated locally to avoid random third-party BGM claims)
+try:
+    from safe_background_music import add_safe_background_music
+    SAFE_BGM_AVAILABLE = True
+except ImportError:
+    SAFE_BGM_AVAILABLE = False
+    print("[main.py] Safe BGM module not available - uploads will keep source audio only")
+
 # Auto-publish checker (optional - checks processing status and auto-publishes if clean)
 try:
     from auto_publish_checker import AutoPublishChecker
@@ -375,6 +383,23 @@ def main():
                     
                     if not original_video_path:
                         raise Exception("Failed to download video for YouTube")
+
+                    # Add controlled, self-generated BGM after generation.
+                    # The upstream video API random BGM pool triggered YouTube Content ID claims.
+                    if os.getenv("SAFE_BGM_ENABLED", "true").lower() == "true":
+                        if SAFE_BGM_AVAILABLE:
+                            try:
+                                original_video_path = add_safe_background_music(original_video_path)
+                                results["Safe BGM"] = {"success": True}
+                            except Exception as bgm_error:
+                                results["Safe BGM"] = {"success": False, "error": str(bgm_error)}
+                                if os.getenv("SAFE_BGM_REQUIRED", "true").lower() == "true":
+                                    raise Exception(f"Safe BGM mix failed: {bgm_error}")
+                                print(f"[SafeBGM] Failed, continuing without BGM: {bgm_error}")
+                        elif os.getenv("SAFE_BGM_REQUIRED", "true").lower() == "true":
+                            raise Exception("Safe BGM is enabled but safe_background_music.py is unavailable")
+                    else:
+                        results["Safe BGM"] = {"skipped": True}
                     
                     # Run compliance check before upload
                     if args.skip_compliance:

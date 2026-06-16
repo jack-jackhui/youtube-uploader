@@ -49,12 +49,18 @@ def generate_video_terms(api_key, api_host, video_subject, video_script, amount,
 
 def generate_video(api_key, api_host, video_subject, video_script, video_terms, voice_name, video_aspect="9:16",
                    video_concat_mode="random", video_clip_duration=5, video_count=1, video_language="",
-                   voice_volume=1, bgm_type="random", bgm_file="", bgm_volume=0.2,
+                   voice_volume=1, bgm_type=None, bgm_file="", bgm_volume=None,
                    subtitle_enabled=True, subtitle_position="bottom", font_name="STHeitiMedium.ttc",
                    text_fore_color="#FFFFFF", text_background_color="transparent", font_size=60,
                    stroke_color="#000000", stroke_width=1.5, n_threads=2, paragraph_number=1):
     api_url = f'{api_host}/api/v1/videos'
     headers = {'X-API-Key': api_key}
+    if bgm_type is None:
+        # YouTube Shorts >=60s can be globally blocked when copyrighted BGM is detected.
+        # Default to no BGM; set VIDEO_BGM_TYPE=random and VIDEO_BGM_VOLUME=0.2 to re-enable.
+        bgm_type = os.getenv("VIDEO_BGM_TYPE", "")
+    if bgm_volume is None:
+        bgm_volume = float(os.getenv("VIDEO_BGM_VOLUME", "0"))
     payload = {
         "video_subject": video_subject,
         "video_script": video_script,
