@@ -40,7 +40,8 @@ def slugify(name: str) -> str:
 
 def sha256(path: Path) -> str:
     h = hashlib.sha256()
-    with path.open("rb") as f:\n        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
             h.update(chunk)
     return h.hexdigest()
 
@@ -82,7 +83,13 @@ def save_manifest(manifest: dict) -> None:
 
 def upload(api_host: str, api_key: str, path: Path) -> str:
     url = api_host.rstrip("/") + "/api/v1/musics"
-    with path.open("rb") as f:\n        resp = requests.post(url, headers={"X-API-Key": api_key}, files={"file": (path.name, f, "audio/mpeg")}, timeout=120)
+    with path.open("rb") as f:
+        resp = requests.post(
+            url,
+            headers={"X-API-Key": api_key},
+            files={"file": (path.name, f, "audio/mpeg")},
+            timeout=120,
+        )
     resp.raise_for_status()
     data = resp.json()
     return data["data"]["file"]
