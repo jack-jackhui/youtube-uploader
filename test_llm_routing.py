@@ -53,7 +53,7 @@ class FakeFactory:
 def providers():
     return [
         LLMProvider("gemini", "gemini-3.5-flash", "https://generativelanguage.googleapis.com/v1beta/openai/", "g-key"),
-        LLMProvider("cloudflare_workers_ai", "@cf/mistralai/mistral-small-3.1-24b-instruct", "https://api.cloudflare.com/client/v4/accounts/account-id/ai/v1", "c-key"),
+        LLMProvider("cloudflare_workers_ai", "@cf/qwen/qwen3-30b-a3b-fp8", "https://api.cloudflare.com/client/v4/accounts/account-id/ai/v1", "c-key"),
         LLMProvider("openrouter", "nvidia/nemotron-3-ultra-550b-a55b:free", "https://openrouter.ai/api/v1", "o-key"),
         LLMProvider("openrouter", "nvidia/nemotron-3-super-120b-a12b:free", "https://openrouter.ai/api/v1", "o-key"),
     ]
@@ -103,7 +103,7 @@ class ProviderChainTests(unittest.TestCase):
         self.assertEqual(result, "Fallback title?")
         self.assertEqual(
             factory.calls,
-            [("gemini", "gemini-3.5-flash"), ("cloudflare_workers_ai", "@cf/mistralai/mistral-small-3.1-24b-instruct")],
+            [("gemini", "gemini-3.5-flash"), ("cloudflare_workers_ai", "@cf/qwen/qwen3-30b-a3b-fp8")],
         )
 
     def test_cloudflare_retryable_failure_uses_ultra(self):
@@ -114,7 +114,7 @@ class ProviderChainTests(unittest.TestCase):
             factory.calls,
             [
                 ("gemini", "gemini-3.5-flash"),
-                ("cloudflare_workers_ai", "@cf/mistralai/mistral-small-3.1-24b-instruct"),
+                ("cloudflare_workers_ai", "@cf/qwen/qwen3-30b-a3b-fp8"),
                 ("openrouter", "nvidia/nemotron-3-ultra-550b-a55b:free"),
             ],
         )
@@ -129,7 +129,7 @@ class ProviderChainTests(unittest.TestCase):
             factory.calls,
             [
                 ("gemini", "gemini-3.5-flash"),
-                ("cloudflare_workers_ai", "@cf/mistralai/mistral-small-3.1-24b-instruct"),
+                ("cloudflare_workers_ai", "@cf/qwen/qwen3-30b-a3b-fp8"),
                 ("openrouter", "nvidia/nemotron-3-ultra-550b-a55b:free"),
                 ("openrouter", "nvidia/nemotron-3-super-120b-a12b:free"),
             ],
@@ -149,7 +149,7 @@ class ProviderChainTests(unittest.TestCase):
             openai_chatgpt.generate_with_provider_chain("bad request", providers(), factory)
         self.assertEqual(
             factory.calls,
-            [("gemini", "gemini-3.5-flash"), ("cloudflare_workers_ai", "@cf/mistralai/mistral-small-3.1-24b-instruct")],
+            [("gemini", "gemini-3.5-flash"), ("cloudflare_workers_ai", "@cf/qwen/qwen3-30b-a3b-fp8")],
         )
 
     def test_auth_model_quota_and_network_errors_fall_through(self):

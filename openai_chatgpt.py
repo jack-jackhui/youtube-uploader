@@ -17,7 +17,7 @@ from openai import OpenAI
 
 DEFAULT_GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
 DEFAULT_GEMINI_MODEL = "gemini-3.5-flash"
-DEFAULT_CLOUDFLARE_WORKERS_AI_MODEL = "@cf/mistralai/mistral-small-3.1-24b-instruct"
+DEFAULT_CLOUDFLARE_WORKERS_AI_MODEL = "@cf/qwen/qwen3-30b-a3b-fp8"
 DEFAULT_OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 DEFAULT_OPENROUTER_MODELS = (
     "nvidia/nemotron-3-ultra-550b-a55b:free",
