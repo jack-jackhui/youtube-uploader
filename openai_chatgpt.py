@@ -1,7 +1,8 @@
 """LLM routing for video topic generation.
 
-Direct Google Gemini is the primary provider. OpenRouter models are tried in the
-configured order only for provider/auth/quota/model/transport failures. Each
+Direct Google Gemini is the primary provider. Cloudflare Workers AI is the
+first fallback, followed by OpenRouter models in their configured order. The
+chain advances only for provider/auth/quota/model/transport failures. Each
 provider is attempted once; malformed application requests (HTTP 400/422) do
 not fall through to another provider.
 """
@@ -16,6 +17,7 @@ from openai import OpenAI
 
 DEFAULT_GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
 DEFAULT_GEMINI_MODEL = "gemini-3.5-flash"
+DEFAULT_CLOUDFLARE_WORKERS_AI_MODEL = "@cf/mistralai/mistral-small-3.1-24b-instruct"
 DEFAULT_OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 DEFAULT_OPENROUTER_MODELS = (
     "nvidia/nemotron-3-ultra-550b-a55b:free",
@@ -50,7 +52,7 @@ def _read_secret(value_var: str, file_var: str) -> Optional[str]:
 
 
 def build_provider_chain() -> List[LLMProvider]:
-    """Build Gemini -> OpenRouter chain while preserving model list order."""
+    """Build Gemini -> Workers AI -> OpenRouter in deterministic order."""
     providers: List[LLMProvider] = []
 
     gemini_key = _read_secret("GEMINI_API_KEY", "GEMINI_API_KEY_FILE")
@@ -63,6 +65,33 @@ def build_provider_chain() -> List[LLMProvider]:
                 base_url=os.getenv("GEMINI_BASE_URL", DEFAULT_GEMINI_BASE_URL).strip()
                 or DEFAULT_GEMINI_BASE_URL,
                 api_key=gemini_key,
+            )
+        )
+
+    cloudflare_key = _read_secret(
+        "CLOUDFLARE_WORKERS_AI_API_KEY",
+        "CLOUDFLARE_WORKERS_AI_API_KEY_FILE",
+    )
+    cloudflare_account_id = os.getenv("CLOUDFLARE_ACCOUNT_ID", "").strip()
+    cloudflare_base_url = os.getenv(
+        "CLOUDFLARE_WORKERS_AI_BASE_URL", ""
+    ).strip()
+    if not cloudflare_base_url and cloudflare_account_id:
+        cloudflare_base_url = (
+            "https://api.cloudflare.com/client/v4/accounts/"
+            f"{cloudflare_account_id}/ai/v1"
+        )
+    if cloudflare_key and cloudflare_base_url:
+        providers.append(
+            LLMProvider(
+                name="cloudflare_workers_ai",
+                model=os.getenv(
+                    "CLOUDFLARE_WORKERS_AI_MODEL",
+                    DEFAULT_CLOUDFLARE_WORKERS_AI_MODEL,
+                ).strip()
+                or DEFAULT_CLOUDFLARE_WORKERS_AI_MODEL,
+                base_url=cloudflare_base_url,
+                api_key=cloudflare_key,
             )
         )
 
@@ -167,7 +196,7 @@ def generate_video_subject(api_key, prompt):
     """Compatibility wrapper used by ``video_manager``.
 
     ``api_key`` is retained for call-site compatibility; provider credentials
-    are loaded independently so Gemini and OpenRouter never share a key.
+    are loaded independently so providers never share credentials.
     """
     del api_key
     try:
