@@ -228,12 +228,21 @@ def process_video_subject(video_subject, language='en'):
     return video_script, video_terms, tags
 
 
-def generate_video_and_get_urls(video_subject, video_script, video_terms, voice_name, language='en'):
+def generate_video_and_get_urls(video_subject, video_script, video_terms, voice_name, language='en', include_default_ending=True):
     api_host = os.getenv('API_HOST')
     api_key = os.getenv('API_KEY')
 
     # Generate the video and get the URLs
-    video_urls = video_api_call.generate_video(api_key, api_host, video_subject, video_script, video_terms, voice_name, video_language=language)
+    video_urls = video_api_call.generate_video(
+        api_key,
+        api_host,
+        video_subject,
+        video_script,
+        video_terms,
+        voice_name,
+        video_language=language,
+        include_default_ending=include_default_ending,
+    )
 
     if not video_urls:
         print("Error in generating video. No URLs returned.")

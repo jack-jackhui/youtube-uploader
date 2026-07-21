@@ -144,7 +144,7 @@ class AutoPublishChecker:
         """Ensure we have an authenticated YouTube service."""
         if self.youtube is None:
             from youtube_manager import authenticate_youtube
-            self.youtube = authenticate_youtube()
+            self.youtube = authenticate_youtube(require_force_ssl=True)
     
     def get_video_status(self, video_id: str) -> VideoStatus:
         """

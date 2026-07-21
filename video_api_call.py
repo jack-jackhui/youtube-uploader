@@ -79,7 +79,8 @@ def generate_video(api_key, api_host, video_subject, video_script, video_terms, 
                    voice_volume=1, bgm_type=None, bgm_file="", bgm_volume=None,
                    subtitle_enabled=True, subtitle_position="bottom", font_name="STHeitiMedium.ttc",
                    text_fore_color="#FFFFFF", text_background_color="transparent", font_size=60,
-                   stroke_color="#000000", stroke_width=1.5, n_threads=2, paragraph_number=1):
+                   stroke_color="#000000", stroke_width=1.5, n_threads=2, paragraph_number=1,
+                   include_default_ending=True):
     api_url = f'{api_host}/api/v1/videos'
     headers = {'X-API-Key': api_key}
     if bgm_type is None:
@@ -117,7 +118,8 @@ def generate_video(api_key, api_host, video_subject, video_script, video_terms, 
         "stroke_color": stroke_color,
         "stroke_width": stroke_width,
         "n_threads": n_threads,
-        "paragraph_number": paragraph_number
+        "paragraph_number": paragraph_number,
+        "include_default_ending": include_default_ending
     }
     try:
         response = requests.post(api_url, headers=headers, json=payload)

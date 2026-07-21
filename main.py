@@ -139,19 +139,98 @@ def load_script_file(path):
     raise ValueError(f"Unsupported script file type: {suffix or 'unknown'}")
 
 
-def _compose_backlog_script(entry):
+def _spoken_site_url(url):
+    if not url:
+        return "the website"
+    return re.sub(r"^https?://(?:www\.)?", "", str(url)).strip("/")
+
+
+def _naturalize_outline_line(line, default_url=None):
+    """Turn planning-outline instructions into viewer-facing narration.
+
+    The video API reads ``video_script`` literally. Campaign backlog
+    ``script_outline`` values are producer notes, so imperative labels such as
+    "Explain", "Show", and "CTA to" must not be passed through as narration.
+    """
+    text = str(line).strip().strip("-• ")
+    if not text:
+        return ""
+
+    site_url = _spoken_site_url(default_url)
+
+    # Remove common producer-note verbs and producer-note labels from a clause.
+    # Keep the idea, but remove instructions that the video API would otherwise
+    # read literally in the voiceover.
+    replacements = [
+        (r"(?i)^open with (?:the )?", ""),
+        (r"(?i)^start with (?:the )?", ""),
+        (r"(?i)^break down (?:the )?", ""),
+        (r"(?i)^define (?:the )?", ""),
+        (r"(?i)^explain (?:the |why |how |what )?", ""),
+        (r"(?i)^show (?:the |how )?", ""),
+        (r"(?i)^teach (?:the )?", ""),
+        (r"(?i)^suggest (?:a |an |the )?", ""),
+        (r"(?i)^recommend (?:a |an |the )?", ""),
+        (r"(?i)^warn (?:against |about )?", "Watch out for "),
+        (r"(?i)^normalize ", "It is normal to feel "),
+        (r"(?i)^acknowledge ", "It is worth remembering that "),
+        (r"(?i)^compare ", "Compare "),
+        (r"(?i)^contrast ", "Compare "),
+        (r"(?i)^discuss ", ""),
+        (r"(?i)^position ", ""),
+        (r"(?i)^mention ", ""),
+        (r"(?i)^note ", ""),
+        (r"(?i)^include ", ""),
+        (r"(?i)^cover ", ""),
+        (r"(?i)^describe ", ""),
+        (r"(?i)^summarize ", "Here are "),
+        (r"(?i)^invite action:?\s*", ""),
+        (r"(?i)^remove overwhelm:?\s*", "Keep it simple: "),
+        (r"(?i)^close with (?:a |an |the )?(?:clear )?(?:spoken )?(?:call[- ]to[- ]action|cta)[:\s]*(?:to )?", ""),
+        (r"(?i)^end with (?:a |an |the )?(?:clear )?(?:spoken )?(?:call[- ]to[- ]action|cta)[:\s]*(?:to )?", ""),
+        (r"(?i)^call[- ]to[- ]action[:\s]*(?:to )?", ""),
+        (r"(?i)^cta\s*(?:to|:)\s*", ""),
+        (r"(?i)^close with ", ""),
+        (r"(?i)^end with ", ""),
+    ]
+    for pattern, repl in replacements:
+        text = re.sub(pattern, repl, text).strip()
+
+    # Hide internal labels if they appear mid-clause.
+    text = re.sub(r"(?i)\b(?:clear )?(?:spoken )?call[- ]to[- ]action[:\s]*(?:to )?", "", text).strip()
+    text = re.sub(r"(?i)\bCTA\s*(?:to|:)\s*", "", text).strip()
+    text = re.sub(r"(?i)\blink in bio\b", site_url, text).strip()
+
+    if not text:
+        return ""
+    text = text[0].upper() + text[1:]
+    if text[-1] not in ".!?:":
+        text += "."
+    return text
+
+
+def _compose_backlog_script(entry, campaign_meta=None):
     for key in ("script", "video_script", "full_script", "body", "voiceover"):
         value = entry.get(key)
         if value:
             return str(value).strip()
+    campaign_meta = campaign_meta or {}
+    default_url = entry.get("product_url") or campaign_meta.get("product_url")
     parts = []
     if entry.get("hook"):
         parts.append(str(entry["hook"]).strip())
     if entry.get("script_outline"):
-        outline = re.sub(r";\s*", "\n", str(entry["script_outline"]).strip())
-        parts.append(outline)
+        outline_lines = [
+            _naturalize_outline_line(line, default_url=default_url)
+            for line in re.split(r";\s*|\n+", str(entry["script_outline"]).strip())
+        ]
+        parts.extend(line for line in outline_lines if line)
     if entry.get("cta"):
-        parts.append(str(entry["cta"]).strip())
+        cta = str(entry["cta"]).strip()
+        cta = re.sub(r"(?i)\blink in bio\b", _spoken_site_url(default_url), cta)
+        cta = re.sub(r"(?i)^cta\s*(?:to|:)\s*", "", cta).strip()
+        if cta and not any(part.strip().lower().rstrip(".!") == cta.lower().rstrip(".!") for part in parts):
+            parts.append(cta)
     return "\n\n".join(part for part in parts if part)
 
 
@@ -174,7 +253,7 @@ def load_backlog_entry(path, day):
     if isinstance(hashtags, str):
         hashtags = re.findall(r"#[\w-]+", hashtags) or [h.strip() for h in hashtags.split(",") if h.strip()]
     metadata = {**campaign_meta, **entry, "source": str(path)}
-    return {"topic": entry.get("topic") or entry.get("title") or f"Campaign Day {day}", "script": _compose_backlog_script(entry), "hashtags": hashtags, "metadata": metadata}
+    return {"topic": entry.get("topic") or entry.get("title") or f"Campaign Day {day}", "script": _compose_backlog_script(entry, campaign_meta), "hashtags": hashtags, "metadata": metadata}
 
 
 def resolve_campaign_input(args):
@@ -283,7 +362,7 @@ def main():
             print("Error: --video-id required with --publish-after-check")
             return 1
         try:
-            youtube = authenticate_youtube()
+            youtube = authenticate_youtube(require_force_ssl=True)
             update_video_privacy(youtube, args.video_id, "public")
             print(f"Video {args.video_id} is now PUBLIC")
             print(f"  URL: https://youtube.com/watch?v={args.video_id}")
@@ -305,11 +384,16 @@ def main():
         print(f"[Validation] Script chars: {len(campaign_input.get('script') or '')}")
         print(f"[Validation] Tags: {', '.join(tags)}")
         print(f"[Validation] Description chars: {len(description)}")
-        # Validate CTA overlay config if present
+        # Validate CTA overlay / ending config if present
         overlay_config = metadata.get("cta_overlay", {})
         if overlay_config.get("enabled"):
             print(f"[Validation] CTA Overlay: enabled")
             print(f"[Validation] CTA Text: {overlay_config.get('text', '')} : {overlay_config.get('url', '')}")
+        ending_config = metadata.get("ending_video", {})
+        if ending_config.get("enabled"):
+            print(f"[Validation] Custom Ending: enabled")
+            print(f"[Validation] Ending Path: {ending_config.get('path', '')}")
+            print("[Validation] include_default_ending: False")
         return 0
     
     # Track results for summary
@@ -354,8 +438,19 @@ def main():
             if campaign_input:
                 tags = tags_from_campaign(campaign_input, tags)
                 video_terms = tags
-        upload_description = build_upload_description(video_subject, video_script, campaign_input.get("metadata", {}) if campaign_input else {})
-        video_urls = generate_video_and_get_urls(video_subject, video_script, video_terms, voice_name, language)        
+        campaign_metadata_for_generation = campaign_input.get("metadata", {}) if campaign_input else {}
+        include_default_ending = not bool(campaign_metadata_for_generation.get("ending_video", {}).get("enabled"))
+        if not include_default_ending:
+            print("[Pipeline] Custom ending configured; requesting API include_default_ending=False")
+        upload_description = build_upload_description(video_subject, video_script, campaign_metadata_for_generation)
+        video_urls = generate_video_and_get_urls(
+            video_subject,
+            video_script,
+            video_terms,
+            voice_name,
+            language,
+            include_default_ending=include_default_ending,
+        )
         if not video_urls:
             raise Exception("Failed to generate video - no URLs returned")
         
@@ -439,12 +534,18 @@ def main():
                             video_subject=video_subject
                         )
                         
-                        if overlay_result.get("overlay_applied"):
-                            print(f"[Pipeline] CTA overlay applied successfully")
+                        if overlay_result.get("overlay_applied") or overlay_result.get("ending_appended"):
+                            if overlay_result.get("overlay_applied"):
+                                print(f"[Pipeline] CTA overlay applied successfully")
+                                results["CTA Overlay"] = {"success": True}
+                            else:
+                                print(f"[Pipeline] No CTA overlay configured for this campaign")
+                            if overlay_result.get("ending_appended"):
+                                print(f"[Pipeline] Custom ending appended successfully")
+                                results["Custom Ending"] = {"success": True}
                             original_video_path = overlay_result["processed_path"]
-                            results["CTA Overlay"] = {"success": True}
                         else:
-                            print(f"[Pipeline] No CTA overlay configured for this campaign")
+                            print(f"[Pipeline] No CTA overlay or custom ending configured for this campaign")
                     
                     youtube = authenticate_youtube()
                     upload_response = upload_video(youtube, original_video_path, video_subject, upload_description, tags)
@@ -470,7 +571,9 @@ def main():
                                 print(f"[YouTube] Auto-publish enabled - checking processing status...")
                                 results["Auto-Publish Check"] = {"success": False}
                                 try:
-                                    checker = AutoPublishChecker(youtube_service=youtube)
+                                    # Use a fresh force-ssl scoped YouTube service for status/privacy
+                                    # checks. The upload service only has youtube.upload scope.
+                                    checker = AutoPublishChecker()
                                     auto_result = checker.check_and_publish(video_id)
                                     
                                     if auto_result.published:

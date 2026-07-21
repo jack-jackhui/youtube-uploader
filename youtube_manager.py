@@ -5,6 +5,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.http import MediaFileUpload
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
+from google.auth.exceptions import RefreshError
 import os
 import pickle
 import re
@@ -48,26 +49,33 @@ def sanitize_title(title):
     return title
 
 
-def authenticate_youtube(force_readonly=False):
+def authenticate_youtube(force_readonly=False, require_force_ssl=False):
     """
     Authenticate with YouTube API.
     
     Args:
-        force_readonly: If True, use readonly scope (for status checks only)
+        force_readonly: Deprecated; kept for caller compatibility.
+        require_force_ssl: If True, require youtube.force-ssl for privacy/status
+            updates. Default stays youtube.upload so the long-lived legacy
+            uploader refresh token remains usable for videos.insert.
         
     Returns:
         Authenticated YouTube service object
     """
-    # Define the scopes required by the application.
-    # youtube.force-ssl covers upload, status/list checks, and privacy updates.
-    # youtube.upload alone cannot call videos.update(part=status).
-    scopes = ["https://www.googleapis.com/auth/youtube.force-ssl"]
+    # Choose the narrowest scope needed by the current operation.
+    # youtube.upload is enough for videos.insert and matches the legacy
+    # long-lived credential. videos.update/list status paths need force-ssl.
+    scopes = ["https://www.googleapis.com/auth/youtube.force-ssl"] if require_force_ssl else ["https://www.googleapis.com/auth/youtube.upload"]
 
     # Path to your client_secrets.json file
     client_secrets_file = os.path.join(os.path.dirname(__file__), "client_secrets.json")
 
-    # Path to the credentials file
-    credentials_path = "youtube_credentials.pickle"
+    # Path to the credentials file. Keep durable upload and force-ssl grants
+    # separate so a revoked force-ssl token cannot break normal uploads. Use an
+    # absolute path so cron/manual runs do not accidentally read/write a
+    # different pickle from another cwd.
+    credentials_filename = "youtube_force_ssl_credentials.pickle" if require_force_ssl else "youtube_credentials.pickle"
+    credentials_path = os.path.join(os.path.dirname(__file__), credentials_filename)
     credentials = None
 
     # Load saved credentials from a file if it exists
@@ -80,12 +88,25 @@ def authenticate_youtube(force_readonly=False):
     has_required_scopes = bool(credentials and credentials.has_scopes(scopes))
     if not credentials or not credentials.valid or not has_required_scopes:
         if credentials and credentials.expired and credentials.refresh_token and has_required_scopes:
-            # Refresh the access token automatically if possible
-            credentials.refresh(Request())
+            # Refresh the access token automatically if possible. Persist the
+            # refreshed access token to avoid needless refreshes in the same hour.
+            try:
+                credentials.refresh(Request())
+                with open(credentials_path, "wb") as token:
+                    pickle.dump(credentials, token)
+            except RefreshError as exc:
+                raise RuntimeError(
+                    "YouTube OAuth reauthorization required: refresh token was "
+                    "expired or revoked. Run: venv/bin/python reauth_youtube.py --profile force-ssl --print-url, "
+                    "open the URL, then exchange the pasted callback URL with "
+                    "venv/bin/python reauth_youtube.py --profile force-ssl --callback-url CALLBACK_URL --write"
+                ) from exc
         else:
+            required_scope = "youtube.force-ssl" if require_force_ssl else "youtube.upload"
             raise RuntimeError(
-                "YouTube OAuth reauthorization required: youtube_credentials.pickle "
-                "does not include youtube.force-ssl scope. Run the manual reauth flow."
+                f"YouTube OAuth reauthorization required: {credentials_filename} "
+                f"does not include {required_scope} scope. Run: "
+                f"venv/bin/python reauth_youtube.py --profile {'force-ssl' if require_force_ssl else 'upload'} --print-url"
             )
 
     # Build the service object.

@@ -24,7 +24,7 @@ def main():
     print(f"Publishing video {args.video_id} as {privacy}...")
     
     try:
-        youtube = authenticate_youtube()
+        youtube = authenticate_youtube(require_force_ssl=True)
         update_video_privacy(youtube, args.video_id, privacy)
         print(f"Video {args.video_id} is now {privacy.upper()}")
         print(f"  URL: https://youtube.com/watch?v={args.video_id}")

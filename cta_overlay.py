@@ -392,6 +392,105 @@ def apply_cta_overlay(
         return None
 
 
+def _video_has_audio(video_path: str) -> bool:
+    """Return True if the video has at least one audio stream."""
+    cmd = [
+        "ffprobe", "-v", "error",
+        "-select_streams", "a:0",
+        "-show_entries", "stream=codec_type",
+        "-of", "csv=p=0",
+        video_path,
+    ]
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        return result.returncode == 0 and "audio" in result.stdout.lower()
+    except Exception as e:
+        logger.warning(f"[Ending] Failed to inspect audio stream for {video_path}: {e}")
+        return False
+
+
+def append_ending_video(
+    main_video_path: str,
+    ending_video_path: str,
+    output_path: Optional[str] = None,
+    width: int = 1080,
+    height: int = 1920,
+    fps: int = 30,
+) -> Optional[str]:
+    """Append a custom ending clip as the final scene."""
+    if not os.path.exists(main_video_path):
+        logger.error(f"[Ending] Main video not found: {main_video_path}")
+        return None
+    if not ending_video_path or not os.path.exists(ending_video_path):
+        logger.error(f"[Ending] Ending video not found: {ending_video_path}")
+        return None
+
+    if output_path is None:
+        base, ext = os.path.splitext(main_video_path)
+        output_path = f"{base}_with_ending{ext}"
+
+    main_duration = get_video_duration(main_video_path) or 0
+    ending_duration = get_video_duration(ending_video_path) or 0
+    main_has_audio = _video_has_audio(main_video_path)
+    ending_has_audio = _video_has_audio(ending_video_path)
+
+    cmd = ["ffmpeg", "-y", "-i", main_video_path, "-i", ending_video_path]
+    next_input = 2
+    main_audio_label = "0:a"
+    ending_audio_label = "1:a"
+
+    if not main_has_audio:
+        cmd.extend(["-f", "lavfi", "-t", f"{main_duration:.3f}", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100"])
+        main_audio_label = f"{next_input}:a"
+        next_input += 1
+    if not ending_has_audio:
+        cmd.extend(["-f", "lavfi", "-t", f"{ending_duration:.3f}", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100"])
+        ending_audio_label = f"{next_input}:a"
+        next_input += 1
+
+    video_norm = (
+        f"scale={width}:{height}:force_original_aspect_ratio=decrease,"
+        f"pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,"
+        f"setsar=1,fps={fps},format=yuv420p"
+    )
+    filter_complex = (
+        f"[0:v]{video_norm}[v0];"
+        f"[1:v]{video_norm}[v1];"
+        f"[{main_audio_label}]aformat=sample_rates=44100:channel_layouts=stereo,asetpts=PTS-STARTPTS[a0];"
+        f"[{ending_audio_label}]aformat=sample_rates=44100:channel_layouts=stereo,asetpts=PTS-STARTPTS[a1];"
+        f"[v0][a0][v1][a1]concat=n=2:v=1:a=1[v][a]"
+    )
+
+    cmd.extend([
+        "-filter_complex", filter_complex,
+        "-map", "[v]",
+        "-map", "[a]",
+        "-c:v", "libx264",
+        "-preset", "medium",
+        "-crf", "23",
+        "-c:a", "aac",
+        "-b:a", "128k",
+        "-movflags", "+faststart",
+        output_path,
+    ])
+
+    logger.info(f"[Ending] Appending ending clip as final scene: {ending_video_path}")
+    try:
+        subprocess.run(cmd, capture_output=True, text=True, check=True)
+        if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+            if output_path != main_video_path:
+                shutil.move(output_path, main_video_path)
+            logger.info(f"[Ending] Successfully appended ending to: {main_video_path}")
+            return main_video_path
+        logger.error(f"[Ending] Output file missing or empty: {output_path}")
+        return None
+    except subprocess.CalledProcessError as e:
+        logger.error(f"[Ending] ffmpeg append failed: {e.stderr}")
+        if os.path.exists(output_path):
+            os.remove(output_path)
+        return None
+
+
 # ==============================================================================
 # Public Video Serving (for Instagram)
 # ==============================================================================
@@ -528,24 +627,40 @@ def process_video_with_overlay(
     # Build config
     config = OverlayConfig.from_dict(overlay_data)
     
-    if not config.enabled:
+    processed_path = video_path
+
+    if config.enabled:
+        processed_path = apply_cta_overlay(video_path, config)
+        if processed_path:
+            result["processed_path"] = processed_path
+            result["overlay_applied"] = True
+        else:
+            processed_path = video_path
+    else:
         logger.info("[CTA Overlay] Overlay not enabled for this video")
-        return result
     
-    # Apply overlay
-    processed_path = apply_cta_overlay(video_path, config)
+    # Append optional campaign ending after overlays so the custom ending is the
+    # final scene in the produced/uploaded video.
+    ending_data = campaign_metadata.get("ending_video", {})
+    if ending_data.get("enabled"):
+        ending_path = ending_data.get("path")
+        appended_path = append_ending_video(processed_path, ending_path)
+        if appended_path:
+            processed_path = appended_path
+            result["processed_path"] = appended_path
+            result["ending_appended"] = True
+            logger.info(f"[Ending] Campaign ending appended last: {ending_path}")
+        else:
+            result["ending_appended"] = False
+            logger.warning("[Ending] Failed to append campaign ending; continuing with current video")
     
-    if processed_path:
-        result["processed_path"] = processed_path
-        result["overlay_applied"] = True
-        
-        # Publish for Instagram if configured
-        if config.publish_public:
-            public_url, public_path = publish_video_for_instagram(
-                processed_path, config, video_subject
-            )
-            result["public_url"] = public_url
-            result["public_path"] = public_path
+    # Publish for Instagram if configured, after all local processing.
+    if config.enabled and config.publish_public:
+        public_url, public_path = publish_video_for_instagram(
+            processed_path, config, video_subject
+        )
+        result["public_url"] = public_url
+        result["public_path"] = public_path
     
     return result
 
