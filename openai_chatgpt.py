@@ -1,7 +1,8 @@
 """LLM routing for video topic generation.
 
 Direct Google Gemini is the primary provider. Cloudflare Workers AI is the
-first fallback, followed by OpenRouter models in their configured order. The
+first fallback, followed by OpenRouter models in their configured order, then
+a local LiteLLM proxy as the final fallback. The
 chain advances only for provider/auth/quota/model/transport failures. Each
 provider is attempted once; malformed application requests (HTTP 400/422) do
 not fall through to another provider.
@@ -23,6 +24,8 @@ DEFAULT_OPENROUTER_MODELS = (
     "nvidia/nemotron-3-ultra-550b-a55b:free",
     "nvidia/nemotron-3-super-120b-a12b:free",
 )
+DEFAULT_LITELLM_BASE_URL = "http://127.0.0.1:14000/v1"
+DEFAULT_LITELLM_MODEL = "DeepSeek-V4.1-Flash-1017"
 RETRYABLE_HTTP_STATUSES = {401, 403, 404, 408, 409, 425, 429}
 NON_RETRYABLE_HTTP_STATUSES = {400, 422}
 
@@ -109,6 +112,28 @@ def build_provider_chain() -> List[LLMProvider]:
                     api_key=openrouter_key,
                 )
             )
+
+    # Local LiteLLM proxy (OpenAI-compatible). Last in the chain: only
+    # reached when every hosted provider above is unavailable. The base
+    # URL is expected to include the /v1 suffix; the model name is
+    # whatever the proxy exposes.
+    litellm_key = _read_secret("LITELLM_API_KEY", "LITELLM_API_KEY_FILE")
+    litellm_base_url = os.getenv(
+        "LITELLM_BASE_URL", DEFAULT_LITELLM_BASE_URL
+    ).strip()
+    if litellm_key and litellm_base_url:
+        litellm_model = (
+            os.getenv("LITELLM_MODEL", DEFAULT_LITELLM_MODEL).strip()
+            or DEFAULT_LITELLM_MODEL
+        )
+        providers.append(
+            LLMProvider(
+                name="litellm",
+                model=litellm_model,
+                base_url=litellm_base_url,
+                api_key=litellm_key,
+            )
+        )
 
     return providers
 

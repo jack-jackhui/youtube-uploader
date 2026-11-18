@@ -231,11 +231,12 @@ def publish_video_to_instagram(
 
                 if status == "ERROR":
                     context["processing_code"] = processing_code
-                    if processing_code == 2207085 and not transient_retry_used:
+                    context["processing_container_id"] = container_id
+                    if processing_code == TRANSIENT_PROCESSING_CODE and not transient_retry_used:
                         transient_retry_used = True
                         recreate_container = True
                         print(
-                            "[Instagram] Transient processing error 2207085; "
+                            f"[Instagram] Transient processing error {TRANSIENT_PROCESSING_CODE}; "
                             f"waiting {transient_retry_wait}s before creating one fresh container"
                         )
                         time.sleep(transient_retry_wait)

@@ -1,7 +1,7 @@
 # topic_history.py
 
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
 import logging
 
@@ -77,16 +77,21 @@ def get_recent_topics(days=14):
         list: List of topic dictionaries
     """
     try:
-        cutoff_date = datetime.now() - timedelta(days=days)
-        # Use ISO 8601 format for NocoDB
-        cutoff_str = cutoff_date.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+        # Compare in UTC so the cutoff matches how NocoDB stores generated_at.
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
 
-        # NocoDB filter for generated_at >= cutoff_date
+        # NocoDB will NOT compare a string literal against a datetime column:
+        # ISO with or without Z, and with a numeric offset, all return
+        # 422 "<value> is not supported". Only the exactDate operator coerces
+        # correctly. It is day-granular, so the local pass below tightens the
+        # result to the exact cutoff.
+        cutoff_day = cutoff_date.strftime("%Y-%m-%d")
+
         response = requests.get(
             API_BASE,
             headers=HEADERS,
             params={
-                "where": f"(generated_at,ge,{cutoff_str})",
+                "where": f"(generated_at,ge,exactDate,{cutoff_day})",
                 "sort": "-generated_at",
                 "limit": 100
             }
@@ -99,7 +104,11 @@ def get_recent_topics(days=14):
             return topics
         else:
             # If filter fails, try fetching all and filtering locally
-            logger.warning(f"Filter query failed: {response.status_code}, trying without filter...")
+            logger.warning(
+                "Filter query failed: %s (%s), falling back to unfiltered fetch",
+                response.status_code,
+                (response.text or "")[:120],
+            )
             response = requests.get(
                 API_BASE,
                 headers=HEADERS,
@@ -117,7 +126,11 @@ def get_recent_topics(days=14):
                     gen_at = topic.get("generated_at")
                     if gen_at:
                         try:
-                            topic_date = datetime.fromisoformat(gen_at.replace('Z', '+00:00').replace('+00:00', ''))
+                            topic_date = datetime.fromisoformat(
+                                str(gen_at).replace("Z", "+00:00")
+                            )
+                            if topic_date.tzinfo is None:
+                                topic_date = topic_date.replace(tzinfo=timezone.utc)
                             if topic_date >= cutoff_date:
                                 filtered_topics.append(topic)
                         except (ValueError, TypeError):

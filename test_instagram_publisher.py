@@ -69,6 +69,7 @@ class InstagramPublisherTests(unittest.TestCase):
         self.assertFalse(success)
         self.assertEqual(result["error_code"], 2207085)
         self.assertEqual(result["context"]["processing_code"], 2207085)
+        self.assertEqual(result["context"]["processing_container_id"], "container-2")
         self.assertEqual(result["context"]["container_ids"], ["container-1", "container-2"])
         self.assertEqual(post.call_count, 2)
         self.assertEqual(sleep.call_args_list, [call(7)])
@@ -81,7 +82,10 @@ class InstagramPublisherTests(unittest.TestCase):
         get.return_value = response(200, {
             "status_code": "ERROR",
             "status": "Unsupported video format",
-            "access_token": "secret-token",
+            "diagnostics": {
+                "access_token": "secret-token",
+                "detail": "request used secret-token",
+            },
         })
 
         success, result = instagram_publisher.publish_video_to_instagram(
@@ -91,7 +95,11 @@ class InstagramPublisherTests(unittest.TestCase):
         self.assertFalse(success)
         self.assertIsNone(result["error_code"])
         self.assertEqual(result["context"]["container_ids"], ["container-1"])
-        self.assertEqual(result["context"]["status_payload"]["access_token"], "[REDACTED]")
+        diagnostics = result["context"]["status_payload"]["diagnostics"]
+        self.assertEqual(diagnostics["access_token"], "[REDACTED]")
+        self.assertEqual(diagnostics["detail"], "request used [REDACTED]")
+        self.assertEqual(result["context"]["status_container_id"], "container-1")
+        self.assertEqual(result["context"]["processing_container_id"], "container-1")
         self.assertEqual(post.call_count, 1)
         sleep.assert_not_called()
 

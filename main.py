@@ -49,10 +49,33 @@ except ImportError:
     CTA_OVERLAY_AVAILABLE = False
     print("[main.py] CTA overlay module not available - overlays disabled")
 
-# Determine which .env file to load
+# Determine which .env file to load.
+#
+# load_dotenv() returns False silently when the file is missing, which leaves
+# every credential as None and produces confusing downstream failures (e.g. an
+# empty LLM provider chain). Prefer .env.<ENV>; fall back to .env; then fail
+# loudly if neither exists.
 env = os.getenv("ENV", "development")
-dotenv_path = f".env.{env}"
-load_dotenv(dotenv_path=dotenv_path)
+_dotenv_candidates = [f".env.{env}", ".env"]
+_load_dotenv_resolved = None
+
+for _candidate in _dotenv_candidates:
+    if os.path.exists(_candidate):
+        load_dotenv(dotenv_path=_candidate)
+        _load_dotenv_resolved = _candidate
+        break
+
+if _load_dotenv_resolved is None:
+    raise SystemExit(
+        "FATAL: no environment file found. Looked for: "
+        + ", ".join(_dotenv_candidates)
+        + ". Set ENV to an existing profile or create .env."
+    )
+
+if _load_dotenv_resolved != f".env.{env}":
+    print(
+        f"[main.py] WARNING: .env.{env} missing; loaded {_load_dotenv_resolved} instead"
+    )
 
 # Environment variables
 api_host = os.getenv("API_HOST")

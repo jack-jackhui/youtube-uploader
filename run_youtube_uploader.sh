@@ -49,24 +49,32 @@ log "=========================================="
 log "Pipeline run starting"
 log "=========================================="
 
-# Set environment
-export ENV="production"
+# Set environment (respect an explicit ENV override, e.g. ENV=staging)
+export ENV="${ENV:-production}"
 
-# Activate virtual environment
-if [ -f "$SCRIPT_DIR/venv/bin/activate" ]; then
-    source "$SCRIPT_DIR/venv/bin/activate"
-else
-    log "ERROR: Virtual environment not found at $SCRIPT_DIR/venv"
+# Use the in-tree virtual environment (never a venv from another folder)
+VENV="$SCRIPT_DIR/venv"
+PY="$VENV/bin/python"
+
+if [ ! -x "$PY" ]; then
+    log "ERROR: Virtual environment not found or not executable at $PY"
     exit 1
 fi
 
-# Run the pipeline
-log "Executing main.py --language en"
-python "$SCRIPT_DIR/main.py" --language en 2>&1 | tee -a "$LOG_FILE"
-EXIT_CODE=${PIPESTATUS[0]}
+# Fail loudly if the env profile is missing: load_dotenv() returns False
+# silently, leaving every credential as None and producing confusing failures.
+if [ ! -f "$SCRIPT_DIR/.env.$ENV" ]; then
+    log "ERROR: $SCRIPT_DIR/.env.$ENV not found (ENV=$ENV)"
+    exit 1
+fi
 
-# Deactivate venv
-deactivate 2>/dev/null
+log "Using interpreter: $PY"
+log "Env file: .env.$ENV"
+
+# Run the pipeline (English only; the Chinese pipeline is a separate script)
+log "Executing main.py --language en"
+"$PY" "$SCRIPT_DIR/main.py" --language en 2>&1 | tee -a "$LOG_FILE"
+EXIT_CODE=${PIPESTATUS[0]}
 
 # Report result
 if [ $EXIT_CODE -eq 0 ]; then
