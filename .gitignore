@@ -45,3 +45,18 @@ winningcv.log
 selectprep-video-backlog.json
 selectprep_state.json
 selectprep.log
+
+# --- Secret / artifact hardening (added 2026-11-17) ---
+.secrets/
+*.key
+*.pem
+credentials*.pickle*
+youtube_*credentials.pickle*
+*.bak
+*.bak.*
+backups/
+tmp/
+*.mp4
+wget-log
+cron.log.*
+*.bak_*
