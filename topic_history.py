@@ -8,7 +8,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 # NocoDB Configuration
-NOCODB_URL = "https://nocodb.jackhui.com.au"
+NOCODB_URL = "http://192.168.1.5:8080"
 NOCODB_API_TOKEN = "6XJhI5i7LEomXHPHlVBhXpWtJBTN3cYORVC_Okom"
 TABLE_ID = "mgg9z4uyu7o52hp"
 
