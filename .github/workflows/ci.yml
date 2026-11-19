@@ -1,5 +1,9 @@
-# CI Workflow - Basic Python
-# Runs on every PR and push to main
+# CI Workflow - Python
+# Runs on every PR and push to main.
+#
+# Scope note: this repo has no versioned package and no deploy step. The
+# production pipeline runs from a cron job on the host that owns the code, so
+# CI exists to catch breakage before the nightly run does -- not to deploy.
 
 name: CI
 
@@ -8,12 +12,21 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ['3.11', '3.12']
+        # 3.10 is the interpreter the production venv and cron job actually use.
+        python-version: ['3.10', '3.12']
 
     steps:
       - uses: actions/checkout@v4
@@ -27,20 +40,30 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
-            ${{ runner.os }}-pip-
+            ${{ runner.os }}-pip-${{ matrix.python-version }}-
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install ruff  # Fast Python linter
+          pip install ruff
 
-      - name: Lint with Ruff
-        run: |
-          ruff check . --output-format=github || true  # Non-blocking for now
+      - name: Lint (blocking)
+        # Enforced ruleset is configured in ruff.toml: E9, F63, F7, F82.
+        # These catch undefined names, syntax errors, and statement-level
+        # mistakes -- the failures that would otherwise surface as a broken
+        # 7pm cron run. Style findings stay non-blocking until the backlog
+        # is paid down; run `ruff check .` locally to see them.
+        run: ruff check . --output-format=github
+
+      - name: Report style backlog (non-blocking)
+        # Informational only. Deliberately cannot fail the build.
+        continue-on-error: true
+        run: ruff check . --select F,E4,E7 --output-format=github
 
       - name: Check syntax errors
+        # Compile every tracked Python file, not an arbitrary subset.
         run: |
-          python -m py_compile $(find . -name "*.py" -not -path "./.venv/*" | head -20)
+          git ls-files -z '*.py' | xargs -0 python -m py_compile

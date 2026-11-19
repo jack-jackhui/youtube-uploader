@@ -1,0 +1,27 @@
+# Ruff configuration
+#
+# This codebase predates any lint config and carries a large backlog of
+# stylistic findings (f-strings without placeholders, unused imports, import
+# ordering, typing modernisation). Gating CI on the full default ruleset would
+# fail every push from day one, so the rules are split:
+#
+#   CI enforces  -> E9, F63, F7, F82 (real defects: syntax, undefined names)
+#   CI reports   -> the rest, non-blocking, for backlog paydown
+#
+# Tighten `select` here as the backlog is paid down.
+
+exclude = [".venv", "venv", "backups", ".tranco"]
+
+line-length = 100
+target-version = "py310"
+
+[lint]
+# Enforced in CI. These catch genuine breakage, not preferences.
+#   E9  -> syntax / runtime errors (E901 invalid syntax, E902 IO)
+#   F63 -> invalid comparison / self-comparison
+#   F7  -> statement-level errors (F701 break outside loop, etc.)
+#   F82 -> undefined names (the important one for a cron-driven pipeline)
+select = ["E9", "F63", "F7", "F82"]
+
+# Style backlog: visible in local runs, never fails the build.
+extend-select = ["F", "E4", "E7"]
