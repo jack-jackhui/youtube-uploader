@@ -80,6 +80,13 @@ _RETRYABLE_POST_STATUSES = {500, 502, 503, 504, 520, 521, 522, 523, 524}
 POST_RETRY_ATTEMPTS = int(os.getenv("VIDEO_API_POST_RETRIES", "3"))
 POST_RETRY_BACKOFF_SECONDS = int(os.getenv("VIDEO_API_RETRY_BACKOFF", "30"))
 
+# Status polling is a liveness check, not a deadline. The worker can be
+# single threaded while rendering, so allow a long read and retry rather
+# than declaring the task dead on one slow response.
+POLL_READ_TIMEOUT = int(os.getenv("VIDEO_API_POLL_TIMEOUT", "120"))
+POLL_FAILURE_BACKOFF_SECONDS = int(os.getenv("VIDEO_API_POLL_BACKOFF", "15"))
+POLL_MAX_CONSECUTIVE_FAILURES = int(os.getenv("VIDEO_API_POLL_MAX_FAILURES", "20"))
+
 
 def _post_with_retry(api_url, headers, payload):
     """POST with bounded retries for transient upstream errors.
@@ -197,18 +204,49 @@ def check_task_status(api_key, api_url, task_id):
     status_url = f"{api_url}/api/v1/tasks/{task_id}"
     headers = {'X-API-Key': api_key}
 
+    consecutive_failures = 0
     try:
         while True:
-            response = requests.get(status_url, headers=headers, timeout=30)
+            # A status poll must tolerate a slow or briefly stalled worker.
+            # MoneyPrinterTurbo is single threaded while rendering and may not
+            # service this endpoint quickly; a short timeout here previously
+            # killed multi-hour runs. Treat a timeout as "not ready yet".
+            try:
+                response = requests.get(status_url, headers=headers, timeout=POLL_READ_TIMEOUT)
+            except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as exc:
+                consecutive_failures += 1
+                print(
+                    f"[VideoAPI] status poll attempt {consecutive_failures}/"
+                    f"{POLL_MAX_CONSECUTIVE_FAILURES} failed "
+                    f"({type(exc).__name__}); worker may be busy, retrying in "
+                    f"{POLL_FAILURE_BACKOFF_SECONDS}s"
+                )
+                if consecutive_failures >= POLL_MAX_CONSECUTIVE_FAILURES:
+                    print(
+                        f"[VideoAPI] status endpoint unreachable for "
+                        f"{consecutive_failures} consecutive attempts; giving up on task "
+                        f"{task_id}"
+                    )
+                    return False
+                time.sleep(POLL_FAILURE_BACKOFF_SECONDS)
+                continue
+
             # A transient gateway error should not end the whole run; retry.
             if response.status_code in _RETRYABLE_POST_STATUSES:
+                consecutive_failures += 1
                 print(
-                    f"[VideoAPI] status poll returned {response.status_code}; "
+                    f"[VideoAPI] status poll returned {response.status_code} "
+                    f"({consecutive_failures}/{POLL_MAX_CONSECUTIVE_FAILURES}); "
                     f"retrying in {POST_RETRY_BACKOFF_SECONDS}s"
                 )
+                if consecutive_failures >= POLL_MAX_CONSECUTIVE_FAILURES:
+                    print(f"[VideoAPI] too many retryable errors; giving up on task {task_id}")
+                    return False
                 time.sleep(POST_RETRY_BACKOFF_SECONDS)
                 continue
+
             response.raise_for_status()
+            consecutive_failures = 0
             result = response.json()
 
             data = result.get('data') or {}
