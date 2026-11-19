@@ -74,6 +74,45 @@ def _select_approved_bgm():
 
     return ""
 
+# Transient upstream failures worth retrying: Cloudflare 52x, gateway errors,
+# and connection-level problems. A 4xx is a client error and is not retried.
+_RETRYABLE_POST_STATUSES = {500, 502, 503, 504, 520, 521, 522, 523, 524}
+POST_RETRY_ATTEMPTS = int(os.getenv("VIDEO_API_POST_RETRIES", "3"))
+POST_RETRY_BACKOFF_SECONDS = int(os.getenv("VIDEO_API_RETRY_BACKOFF", "30"))
+
+
+def _post_with_retry(api_url, headers, payload):
+    """POST with bounded retries for transient upstream errors.
+
+    Returns the final response. Raises nothing for retryable statuses; the
+    caller inspects status_code so behaviour stays explicit.
+    """
+    last_exc = None
+    for attempt in range(1, POST_RETRY_ATTEMPTS + 1):
+        try:
+            response = requests.post(api_url, headers=headers, json=payload, timeout=60)
+            if response.status_code not in _RETRYABLE_POST_STATUSES:
+                return response
+            print(
+                f"[VideoAPI] POST attempt {attempt}/{POST_RETRY_ATTEMPTS} returned "
+                f"{response.status_code}; retrying in {POST_RETRY_BACKOFF_SECONDS}s"
+            )
+        except requests.exceptions.RequestException as exc:
+            last_exc = exc
+            print(
+                f"[VideoAPI] POST attempt {attempt}/{POST_RETRY_ATTEMPTS} failed "
+                f"({type(exc).__name__}: {exc}); retrying in {POST_RETRY_BACKOFF_SECONDS}s"
+            )
+        if attempt < POST_RETRY_ATTEMPTS:
+            time.sleep(POST_RETRY_BACKOFF_SECONDS)
+
+    if last_exc is not None:
+        raise last_exc
+    # Every attempt returned a retryable status; hand the last response back so
+    # raise_for_status() reports the real upstream code.
+    return response
+
+
 def generate_video(api_key, api_host, video_subject, video_script, video_terms, voice_name, video_aspect="9:16",
                    video_concat_mode="random", video_clip_duration=5, video_count=1, video_language="",
                    voice_volume=1, bgm_type=None, bgm_file="", bgm_volume=None,
@@ -122,8 +161,10 @@ def generate_video(api_key, api_host, video_subject, video_script, video_terms, 
         "include_default_ending": include_default_ending
     }
     try:
-        response = requests.post(api_url, headers=headers, json=payload)
-        response.raise_for_status()  # This will raise an exception for HTTP errors
+        # Retry 5xx/transport failures. A Cloudflare 522 on the origin used to
+        # abort the whole nightly run; a short backoff usually clears it.
+        response = _post_with_retry(api_url, headers, payload)
+        response.raise_for_status()
         task_id = response.json()['data']['task_id']
         download_url = f"{api_host}/tasks/{task_id}/final-1.mp4"
         converted_video_url = f"{api_host}/tasks/{task_id}/final-1_converted.mp4"
@@ -158,21 +199,39 @@ def check_task_status(api_key, api_url, task_id):
 
     try:
         while True:
-            response = requests.get(status_url, headers=headers)
-            response.raise_for_status()  # Will raise an exception for HTTP errors
+            response = requests.get(status_url, headers=headers, timeout=30)
+            # A transient gateway error should not end the whole run; retry.
+            if response.status_code in _RETRYABLE_POST_STATUSES:
+                print(
+                    f"[VideoAPI] status poll returned {response.status_code}; "
+                    f"retrying in {POST_RETRY_BACKOFF_SECONDS}s"
+                )
+                time.sleep(POST_RETRY_BACKOFF_SECONDS)
+                continue
+            response.raise_for_status()
             result = response.json()
 
-            if result['data']['progress'] == 100:
+            data = result.get('data') or {}
+            # A terminal failure state must not be mistaken for "still working".
+            state = str(data.get('status') or data.get('state') or '').lower()
+            if state in {'failed', 'error', 'cancelled', 'canceled'}:
+                print(f"Task {task_id} entered terminal state '{state}'.")
+                return False
+
+            if data.get('progress') == 100:
                 print("Task completed successfully.")
                 return True
-            elif 'progress' in result['data']:
-                print(f"Task progress: {result['data']['progress']}%")
+            elif 'progress' in data:
+                print(f"Task progress: {data['progress']}%")
                 time.sleep(10)  # Sleep for 10 seconds before polling again
             else:
                 print("Task progress information is missing.")
                 return False
     except requests.exceptions.HTTPError as err:
         print(f"HTTP error occurred: {err} - Status code: {response.status_code}")
+        return False
+    except requests.exceptions.RequestException as err:
+        print(f"[VideoAPI] status poll transport error: {type(err).__name__}: {err}")
         return False
     except Exception as e:
         print(f"An error occurred: {e}")

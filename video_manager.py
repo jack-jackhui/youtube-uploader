@@ -257,10 +257,17 @@ def generate_video_and_get_urls(video_subject, video_script, video_terms, voice_
     if video_api_call.check_task_status(api_key, api_host, task_id):
         # Return the public URLs
         converted_video_url_exist = check_remote_file_exists(converted_video_url)
+        if not original_video_url:
+            print("Task reported success but produced no original video URL.")
+            return None
         return original_video_url, converted_video_url if converted_video_url_exist else None
     else:
+        # Return a single, unambiguous "no video" value. Returning
+        # (None, None) here defeated the caller's `if not video_urls` guard,
+        # because a non-empty tuple is truthy -- which reported SUCCESS and
+        # pushed None into the upload stages.
         print(f"Task {task_id} failed or was incomplete.")
-        return None, None
+        return None
 
 def check_remote_file_exists(url):
     """

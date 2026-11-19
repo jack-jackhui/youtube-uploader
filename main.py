@@ -474,10 +474,28 @@ def main():
             language,
             include_default_ending=include_default_ending,
         )
+        # Guard the real failure shape. A falsy/empty/None-sentinel result and a
+        # tuple carrying None URLs are both "no video" and must fail here, at
+        # the generation stage, rather than surfacing later as a misleading
+        # YouTube download or auth error.
         if not video_urls:
-            raise Exception("Failed to generate video - no URLs returned")
-        
-        original_video_url, converted_video_url = video_urls
+            raise Exception(
+                "Failed to generate video - no URLs returned "
+                "(video generation task failed; see preceding video API log lines)"
+            )
+
+        try:
+            original_video_url, converted_video_url = video_urls
+        except (TypeError, ValueError):
+            raise Exception(
+                f"Failed to generate video - unexpected URL payload: {video_urls!r}"
+            )
+
+        if not original_video_url:
+            raise Exception(
+                "Failed to generate video - generation reported success but "
+                "returned no video URL (upstream video API failure)"
+            )
         results["Video Generation"] = {
             "success": True,
             "details": f"Generated: {video_subject[:50]}..."

@@ -26,9 +26,21 @@ ERROR_CATEGORIES = {
         "severity": "warning"
     },
     "VIDEO_GENERATION_FAILED": {
-        "patterns": ["Task failed", "progress information is missing", "Error in generating video"],
-        "action": "Video generation API failed. Check ai-video-api.jackhui.com.au status.",
-        "severity": "error"
+        "patterns": [
+            "Failed to generate video",
+            "failed or was incomplete",
+            "task failed",
+            "progress information is missing",
+            "Error in generating video",
+            "no video URL",
+            "unexpected URL payload",
+        ],
+        "action": (
+            "Video generation API failed (often a Cloudflare 52x from "
+            "ai-video-api.jackhui.com.au). This is NOT an OAuth problem: no "
+            "upload was attempted. Check the video API origin and re-run."
+        ),
+        "severity": "critical"
     },
     "NETWORK_ERROR": {
         "patterns": ["ConnectionError", "Timeout", "Connection refused"],
